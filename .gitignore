@@ -1,0 +1,40 @@
+cat > .gitignore << 'EOF'
+# =========================
+# Frontend (Node / Vite / Vue)
+# =========================
+node_modules/
+dist/
+.env
+.env.*
+
+# =========================
+# Backend (Python / FastAPI)
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# =========================
+# Docker (runtime / cache only)
+# =========================
+docker-data/
+volumes/
+*.log
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# =========================
+# Database / Runtime Artifacts
+# =========================
+*.sqlite
+*.db
+
+EOF
