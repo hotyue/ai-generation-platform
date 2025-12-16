@@ -5,7 +5,6 @@ from app.database import get_db
 from app.models.history import History
 from app.models.user import User
 from app.routers.auth import get_current_user
-# call_result 保留导入（v1.0.2 / 后台任务会用到）
 from app.utils.http_client import call_result
 
 router = APIRouter(prefix="/history", tags=["History"])
@@ -26,8 +25,8 @@ def list_history(
     """
     E1 + E2 阶段：
     - 查询当前登录用户的生成历史
-    - v1.0.1 方案 A：history 接口不阻塞等待生成结果
-    - status 状态只读（pending / success / failed）
+    - image_url 懒回写
+    - status 状态机（pending / success / failed）
     - 可选分页（不传参数时不分页）
     """
 
@@ -53,18 +52,29 @@ def list_history(
         image_url = h.image_url
 
         # =========================
-        # v1.0.1 · 方案 A
-        #
-        # history 接口职责收敛为：
-        # - 仅返回已知事实
-        # - 不主动查询生成结果
-        # - 不阻塞 / 不等待 / 不推进状态
-        #
-        # pending 状态：
-        # - 直接原样返回
+        # 懒回写 image_url + status
         # =========================
         if h.status == "pending":
-            pass
+            try:
+                result = call_result(h.task_id)
+
+                if result and result.get("status") == "success":
+                    images = result.get("images", [])
+                    if images:
+                        image_url = images[0].get("url")
+                        h.image_url = image_url
+                        h.status = "success"
+                        db.add(h)
+                        db.commit()
+
+                elif result and result.get("status") == "failed":
+                    h.status = "failed"
+                    db.add(h)
+                    db.commit()
+
+            except Exception:
+                # 任何异常都不影响列表返回
+                pass
 
         results.append({
             "id": h.id,
