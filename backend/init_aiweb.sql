@@ -151,7 +151,7 @@ INSERT INTO users (
     created_at
 ) VALUES (
     'admin',
-    '$argon2id$v=19$m=65536,t=3,p=4$PkfoPUdIKWVMyTlHqNU6Jw$BaXIt57qjI6DJeKwCurdcZPDkgfnYkMsfrNrFyi3g4M',
+    '$argon2id$v=19$m=65536,t=3,p=4$da4VwlirVUpJybmXcs4Z4w$gzhTghlaZ7BiJ6J+o4hZ0UpH8VDIyCtnE6ZYUny/n1Q',
     'admin@example.com',
     'admin',
     99,
