@@ -84,19 +84,28 @@ docker compose up -d --build
 启动后默认服务：
 
 服务	地址
+
 前端	http://localhost:8080
+
 后端 API	http://localhost:8000
+
 PostgreSQL	localhost:5432
 
 ---
 
 ⚙️ 配置说明
+
 后端环境变量（示例）
+
 DATABASE_URL=postgresql://aiweb_user:password@db:5432/aiweb
+
 JWT_SECRET=your-secret-key
+
 COMFYUI_BASE_URL=http://your-comfyui-node:9000
 
+
 前端环境变量
+
 VITE_API_BASE=/api
 
 ---
