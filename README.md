@@ -1,107 +1,169 @@
-# AI Generation Platform
+AI Generation Platform
 
-AI Generation Platform is a full-stack web platform for AI image generation, built with **FastAPI**, **Vue**, and **ComfyUI**.  
-It provides a complete solution including user authentication, quota management, task orchestration, and real-time status updates.
+AI Generation Platform 是一个已上线运行的 AI 图像生成平台，采用前后端分离架构，基于 FastAPI + Vue + PostgreSQL，并以 Docker 作为标准交付与运行形态。
 
----
+📌 项目状态说明（非常重要）
 
-## ✨ Features
+当前版本：v1.0.0-beta（已冻结）
 
-- User authentication & authorization
-- AI image generation based on ComfyUI workflows
-- Task queue and generation history
-- Quota & plan management
-- Real-time task status (WebSocket / SSE ready)
-- Admin panel for user & plan management
-- Frontend–backend separation
-- Docker-ready architecture
+系统已进入真实运行状态
 
----
+已存在真实用户、真实生成任务、真实数据库数据
 
-## 🏗️ Project Structure
+本仓库不是 Demo / Sample / Toy Project
 
-```text
-ai-generation-platform/
-├── backend/        # FastAPI backend
-│   └── app/
-│       ├── main.py
-│       ├── routers/
-│       ├── models/
-│       ├── schemas/
-│       ├── utils/
-│       └── ws/
-├── frontend/       # Vue frontend
-│   └── ai-web-g1/
-├── docker/         # Docker-related files (build & runtime)
+📄 版本冻结与演进规则请见：
+👉 docs/VERSIONING.md
+
+🧱 系统总体架构
+┌─────────────┐
+│   Frontend  │  Vue + Nginx (Docker)
+│   (HTTP)    │
+└──────┬──────┘
+       │ /api
+       ▼
+┌─────────────┐
+│   Backend   │  FastAPI + Gunicorn (Docker)
+│             │
+└──────┬──────┘
+       │ SQL
+       ▼
+┌─────────────┐
+│ PostgreSQL  │  数据持久化 (Docker Volume)
+└─────────────┘
+
+外部算力：
+ComfyUI（独立服务器，通过 HTTP 调用）
+
+
+前端为 唯一公网入口
+
+后端仅通过内部网络暴露
+
+数据库不对公网开放
+
+ComfyUI 不纳入本仓库 Docker 编排
+
+📁 仓库目录结构
+.
+├── backend/                 # 后端（FastAPI）
+│   ├── app/                 # 业务代码
+│   ├── Dockerfile           # 后端生产镜像
+│   ├── requirements.txt
+│   ├── init_aiweb.sql
+│
+├── frontend/
+│   └── ai-web-g1/            # 前端（Vue）
+│       ├── Dockerfile        # 前端生产镜像（Vue Build + Nginx）
+│       ├── nginx.conf        # 前端反向代理配置
+│       ├── .env.production   # 前端生产环境变量
+│       └── src/
+│
+├── docker-compose.yml        # 三容器编排（frontend + backend + db）
+├── docs/                     # 项目级文档（建议）
+│   └── VERSIONING.md
+├── scripts/                  # 运维 / 初始化脚本（预留）
 └── README.md
 
+🐳 Docker 化运行（推荐方式）
+1️⃣ 前置条件
 
-🚀 Tech Stack
-Backend
+Docker ≥ 24
 
-FastAPI
+Docker Compose Plugin（docker compose）
 
-SQLAlchemy
+已安装并运行 Docker 服务
 
-JWT Authentication
+验证：
 
-WebSocket / SSE
+docker -v
+docker compose version
 
-Frontend
+2️⃣ 启动完整系统
 
-Vue 3
+在项目根目录执行：
 
-Vite
+docker compose up -d --build
 
-Pinia
 
-Axios
+启动后容器包括：
 
-AI / Infra
+aiweb-frontend
 
-ComfyUI
+aiweb-backend
 
-Docker
+aiweb-db
 
-Redis (optional, planned)
+3️⃣ 访问入口
+服务	地址
+前端	http://localhost:8080
 
-🧪 Development Status
+后端 API（内部）	http://backend:8000
 
-Current stage: v1.0.0-beta
+数据库	内部容器网络
+⚙️ 核心环境变量说明
+Backend（docker-compose.yml）
+DATABASE_URL=postgresql://aiweb_user:***@db:5432/aiweb
+JWT_SECRET=***
+COMFYUI_BASE_URL=http://<comfyui-host>:9000
 
-Actively under development
+Frontend（.env.production）
+VITE_API_BASE=/api
 
-APIs and internal structure may change before stable release
 
-📦 Versioning
+前端通过 Nginx 将 /api 反向代理到后端容器
 
-This project follows Semantic Versioning:
-vMAJOR.MINOR.PATCH[-stage]
+🔐 权限与角色
 
-Examples:
+用户体系基于 JWT
 
-v1.0.0-beta.0
+内置角色：
 
-v1.0.0
+普通用户
 
-v1.0.1
+管理员（admin）
+
+所有权限裁决 仅在后端完成
+
+📜 版本与演进规则
+
+当前冻结版本：v1.0.0-beta
+
+后续版本 不得破坏：
+
+用户模型
+
+配额逻辑
+
+生成 / 历史行为
+
+Docker 三容器架构
+
+📄 详见：docs/VERSIONING.md
+
+🚫 特别声明（禁止事项）
+
+❌ 不假设数据库可重建
+
+❌ 不删除已有数据语义
+
+❌ 不绕过后端直接访问数据库 / 算力
+
+❌ 不以“重构”为理由破坏稳定逻辑
+
+📦 后续规划（非本版本内容）
+
+CDN / 对象存储
+
+异步任务队列
+
+多算力节点调度
+
+CI/CD 自动镜像发布
+
+上述内容 不属于 v1.0.0-beta 冻结范围
 
 📄 License
 
-License will be added when the project is ready for public release.
-
----
-
-# 四、推荐的 Release 命名规范（你马上就能用）
-
-当你推送 `v1.0.0-beta.0` tag 后：
-
-- **Release title**  
-  ```text
-  AI Generation Platform v1.0.0-beta.0
-
-Release description（示例）
-- Initial baseline import
-- Backend: FastAPI core structure
-- Frontend: Vue-based user interface
-- User system, quota management, and generation history
+Private Project
+All Rights Reserved.
