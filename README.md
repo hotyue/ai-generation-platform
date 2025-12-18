@@ -1,167 +1,160 @@
-AI Generation Platform
+```markdown
+# AI Generation Platform
 
 AI 图像生成平台（FastAPI + Vue + Docker）
 
-📌 项目简介 | Project Overview
+*An AI image generation platform built with FastAPI, Vue, and Docker.*
 
-AI Generation Platform 是一个面向真实用户与真实业务场景的 AI 图像生成平台，
-采用 前后端分离 + 三容器 Docker 架构，并与 ComfyUI 算力节点解耦运行。
+---
 
-项目从一开始即按 生产系统标准设计，具备完整的：
+## 📌 项目简介 | Project Overview
 
-用户体系
+**AI Generation Platform** 是一个面向真实用户与真实业务场景的 AI 图像生成平台。
 
-配额 / 套餐 / 计费逻辑
+项目采用 **前后端分离 + 三容器 Docker 架构**，并与 **ComfyUI 算力节点解耦运行**，从一开始即按照生产系统标准设计。
 
-生成任务与历史记录
+主要特性包括：
 
-后台管理能力
+- 用户体系与鉴权
+- 配额 / 套餐 / 计费逻辑
+- 生成任务与历史记录
+- 管理后台
+- 可长期演进的容器化部署结构
 
-可演进的容器化部署结构
+---
 
-🧱 系统架构 | System Architecture
-┌──────────────┐
-│   Frontend   │  Vue 3 + Vite + Nginx
-│  (Container) │  :80
-└──────┬───────┘
-       │  /api/*
-┌──────▼───────┐
-│   Backend    │  FastAPI + Gunicorn
-│  (Container) │  :8000
-└──────┬───────┘
-       │
-┌──────▼───────┐
-│   Database   │  PostgreSQL 14
-│  (Container) │  :5432
-└──────────────┘
+## 🧱 系统架构 | System Architecture
 
-ComfyUI（算力节点）
-- 独立服务器 / 容器
-- 通过 HTTP API 调用
+```text
+Frontend (Vue + Nginx)
+        |
+        |  /api/*
+        v
+Backend (FastAPI)
+        |
+        v
+PostgreSQL
 
+ComfyUI
+- 独立算力节点
+- HTTP API 调用
 📂 目录结构 | Repository Structure
+text
+复制代码
 ai-generation-platform/
-├── backend/                 # 后端 FastAPI 服务
+├── backend/                 # FastAPI 后端
 │   ├── app/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── init_aiweb.sql
 │
 ├── frontend/
-│   └── ai-web-g1/            # 前端 Vue 项目
+│   └── ai-web-g1/            # Vue 前端
 │       ├── Dockerfile
 │       ├── nginx.conf
 │       ├── .env.production
 │       └── src/
 │
-├── docker-compose.yml        # 三容器编排（前端 / 后端 / 数据库）
-├── docker/                   # 预留：未来 Docker 扩展
-├── scripts/                  # 运维 / 初始化脚本
-├── README.md                 # 项目总说明（本文件）
+├── docker-compose.yml        # 前端 / 后端 / 数据库
+├── docker/                   # 预留 Docker 扩展
+├── scripts/                  # 运维脚本
+├── README.md
 └── .gitignore
-
-🐳 Docker 架构说明 | Docker Design
-
-本项目采用 三容器生产架构：
+🐳 Docker 架构 | Docker Architecture
+本项目采用 三容器生产级架构：
 
 容器	说明
-frontend	Vue 构建产物 + Nginx，负责页面与反向代理
-backend	FastAPI + Gunicorn，负责业务逻辑
-db	PostgreSQL 14，持久化用户与业务数据
-关键原则
+frontend	Vue 构建产物 + Nginx
+backend	FastAPI + Gunicorn
+db	PostgreSQL 14
+
+设计原则：
 
 镜像无状态（Stateless）
 
 数据通过 Volume 持久化
 
-配置通过环境变量注入
+所有配置通过环境变量注入
 
-ComfyUI 不纳入本 Compose
+ComfyUI 不纳入 docker-compose
 
-🚀 快速启动（Docker） | Quick Start (Docker)
-1️⃣ 准备环境
-
+🚀 快速启动 | Quick Start
+1️⃣ 环境要求
 Linux（推荐 Ubuntu 22.04）
 
-Docker ≥ 24
+Docker 24+
 
 Docker Compose Plugin
 
+bash
+复制代码
 docker -v
 docker compose version
-
 2️⃣ 启动服务
-
 在项目根目录执行：
 
+bash
+复制代码
 docker compose up -d --build
-
-
-启动后：
+服务地址：
 
 服务	地址
 前端	http://localhost:8080
-
-后端 API	http://localhost:8000
-
+后端	http://localhost:8000
 数据库	localhost:5432
-3️⃣ 停止服务
-docker compose down
 
-🔧 环境变量说明 | Environment Variables
+3️⃣ 停止服务
+bash
+复制代码
+docker compose down
+🔧 环境变量 | Environment Variables
 后端（docker-compose.yml）
+env
+复制代码
 DATABASE_URL=postgresql://aiweb_user:***@db:5432/aiweb
 JWT_SECRET=***
 COMFYUI_BASE_URL=http://<comfyui-host>:9000
-
-前端（frontend/ai-web-g1/.env.production）
+前端（.env.production）
+env
+复制代码
 VITE_API_BASE=/api
+前端环境变量仅在构建阶段生效。
 
+🔐 安全约定 | Security Notes
+不要提交真实密码或生产密钥
 
-⚠️ 前端只认 构建期环境变量，运行时不读取 .env
+数据库 Volume 不应随意删除
 
-🔐 安全与约定 | Security & Conventions
+所有生成行为必须可审计
 
-.env.production、真实密码 禁止提交到公开仓库
-
-数据库 Volume 不可随意删除
-
-所有生成行为 必须可审计
-
-不允许在生产环境“随意重建数据库”
+不允许在生产环境随意重建数据库
 
 🧭 版本治理 | Version Governance
+v1.0.0-beta：生产基线版本（已冻结）
 
-v1.0.0-beta：已冻结（生产基线）
+后续版本仅允许增量演进
 
-后续版本仅允许 增量演进
+不允许回滚或篡改历史行为语义
 
-不允许回滚、篡改历史行为语义
+📚 文档规划 | Documentation Plan
+建议后续新增：
 
-📚 文档规划建议 | Documentation Strategy
-
-建议后续新增专用文档目录：
-
+text
+复制代码
 docs/
-├── architecture.md      # 架构设计说明
-├── deployment.md        # 部署与运维
-├── api.md               # API 规范
-├── database.md          # 数据库结构说明
-└── version-ledger.md    # 版本事实记录
-
+├── architecture.md
+├── deployment.md
+├── api.md
+├── database.md
+└── version-ledger.md
 🧠 设计理念 | Design Philosophy
-
-这是一个真实运行的工程系统，不是 Demo。
+这是一个真实运行的工程系统，而不是 Demo。
 
 事实优先于设计
 
 数据优先于重构
 
-可解释性优先于“炫技”
-
-稳定优先于速度
+稳定优先于炫技
 
 📄 License
-
 Private / Internal Use
-（如需开源或商业授权，请另行声明）
