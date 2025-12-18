@@ -114,23 +114,23 @@ VITE_API_BASE=/api
 
 详细设计与部署说明统一放在 docs/：
 
-系统架构总览：docs/00_overview.md
+- 系统架构总览：docs/00_overview.md
 
-Docker 生产部署白皮书：docs/01_deployment_docker.md
+- Docker 生产部署白皮书：docs/01_deployment_docker.md
 
-系统架构设计：docs/02_architecture.md
+- 系统架构设计：docs/02_architecture.md
 
-数据库设计：docs/03_database.md
+- 数据库设计：docs/03_database.md
 
-安全与鉴权模型：docs/04_security.md
+- 安全与鉴权模型：docs/04_security.md
 
-版本冻结与演进策略：docs/05_versioning.md
+- 版本冻结与演进策略：docs/05_versioning.md
 
 ---
 
 🧊 版本状态
 
-当前版本：v1.0.0-beta（已冻结）
+当前版本：v1.0.3（已冻结）
 
 本版本作为 生产基线
 
