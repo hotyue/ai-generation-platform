@@ -5,14 +5,19 @@ services:
     container_name: aiweb-db
     image: postgres:14
     restart: always
+
     environment:
       POSTGRES_DB: aiweb
       POSTGRES_USER: aiweb_user
-      POSTGRES_PASSWORD: REDACTED_PASSWORD
+      # 密码不再明文写入，由 .env 注入
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     volumes:
       - aiweb_pgdata:/var/lib/postgresql/data
+
     networks:
       - aiweb-net
+
 
   backend:
     container_name: aiweb-backend
@@ -20,19 +25,27 @@ services:
       context: ./backend
     image: aiweb-backend:latest
     restart: always
+
     depends_on:
       - db
+
+    # 所有敏感配置统一从 .env 注入
+    env_file:
+      - .env
+
+    # 非敏感、结构性配置保留在 compose 中
     environment:
       ENV: production
       DEBUG: "false"
       PYTHONUNBUFFERED: "1"
-      DATABASE_URL: postgresql://aiweb_user:REDACTED_PASSWORD@db:5432/aiweb
-      JWT_SECRET: REDACTED_JWT_SECRET
       COMFYUI_BASE_URL: http://100.114.23.111:9000
+
     expose:
       - "8000"
+
     networks:
       - aiweb-net
+
 
   frontend:
     container_name: aiweb-frontend
@@ -40,15 +53,20 @@ services:
       context: ./frontend/ai-web-g1
     image: aiweb-frontend:latest
     restart: always
+
     depends_on:
       - backend
+
     ports:
       - "8080:80"
+
     networks:
       - aiweb-net
 
+
 volumes:
   aiweb_pgdata:
+
 
 networks:
   aiweb-net:

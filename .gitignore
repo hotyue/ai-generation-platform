@@ -1,11 +1,15 @@
-cat > .gitignore << 'EOF'
 # =========================
 # Frontend (Node / Vite / Vue)
 # =========================
 node_modules/
 dist/
+
+# =========================
+# Environment / Secrets (T-5)
+# =========================
 .env
 .env.*
+!.env.example
 
 # =========================
 # Backend (Python / FastAPI)
@@ -22,6 +26,13 @@ venv/
 docker-data/
 volumes/
 *.log
+*.pid
+
+# =========================
+# Docker Compose Overrides (local only)
+# =========================
+docker-compose.override.yml
+docker-compose.*.override.yml
 
 # =========================
 # IDE / OS
@@ -36,5 +47,11 @@ Thumbs.db
 # =========================
 *.sqlite
 *.db
+*.dump
+*.sql.backup
 
-EOF
+# =========================
+# Temporary / Local Runtime
+# =========================
+tmp/
+runtime/
