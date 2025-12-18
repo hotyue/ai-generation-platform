@@ -14,13 +14,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(task.router)
-app.include_router(generate.router)
-app.include_router(history.router)
-app.include_router(auth.router)
-app.include_router(admin.router)
-app.include_router(plan.router)
-app.include_router(quota.router)
+# =========================
+# ✅ 统一 API 前缀
+# =========================
+API_PREFIX = "/api"
+
+app.include_router(task.router, prefix=API_PREFIX)
+app.include_router(generate.router, prefix=API_PREFIX)
+app.include_router(history.router, prefix=API_PREFIX)
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(admin.router, prefix=API_PREFIX)
+app.include_router(plan.router, prefix=API_PREFIX)
+app.include_router(quota.router, prefix=API_PREFIX)
 
 @app.get("/")
 def root():
