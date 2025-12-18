@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import task, generate, history, auth
 from app.routers import admin, plan, quota
 
-app = FastAPI(title="AI Web Platform Backend")
+app = FastAPI(title="AI Generation Platform Backend")
 
 app.add_middleware(
     CORSMiddleware,
