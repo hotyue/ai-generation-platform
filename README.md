@@ -63,6 +63,7 @@ ai-generation-platform/
 ├── docs/
 ├── scripts/
 └── README.md
+```
 
 ---
 
@@ -75,8 +76,8 @@ ai-generation-platform/
 ```bash
 git clone <your-repo-url>
 cd ai-generation-platform
-
 docker compose up -d --build
+```
 
 ---
 
@@ -84,10 +85,11 @@ docker compose up -d --build
 
 服务	地址
 前端	http://localhost:8080
-
 后端 API	http://localhost:8000
-
 PostgreSQL	localhost:5432
+
+---
+
 ⚙️ 配置说明
 后端环境变量（示例）
 DATABASE_URL=postgresql://aiweb_user:password@db:5432/aiweb
@@ -97,21 +99,25 @@ COMFYUI_BASE_URL=http://your-comfyui-node:9000
 前端环境变量
 VITE_API_BASE=/api
 
+---
+
 📘 文档导航
 
-详细设计与部署说明请查看 docs/ 目录：
+详细设计与部署说明统一放在 docs/：
 
-📄 系统架构总览
+系统架构总览：docs/00_overview.md
 
-🚢 Docker 生产部署白皮书
+Docker 生产部署白皮书：docs/01_deployment_docker.md
 
-🧠 系统架构设计
+系统架构设计：docs/02_architecture.md
 
-🗄️ 数据库设计
+数据库设计：docs/03_database.md
 
-🔐 安全与鉴权模型
+安全与鉴权模型：docs/04_security.md
 
-🧊 版本冻结与演进策略
+版本冻结与演进策略：docs/05_versioning.md
+
+---
 
 🧊 版本状态
 
@@ -122,6 +128,8 @@ VITE_API_BASE=/api
 后续功能将在 v1.1+ 版本演进
 
 冻结范围与约束详见文档
+
+---
 
 📄 License
 
