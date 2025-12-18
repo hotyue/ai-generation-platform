@@ -1,74 +1,70 @@
 # AI Generation Platform
 
-AI Generation Platform 是一个基于 **FastAPI + Vue + Docker** 的 AI 生成服务平台，  
-支持用户体系、配额计费、生成任务管理，并可对接外部 AI 推理服务（如 ComfyUI）。
+AI Generation Platform 是一个基于 **FastAPI + Vue + Docker** 的 AI 生成服务平台，支持用户体系、配额计费、生成任务管理，并可对接外部 AI 推理服务（如 ComfyUI）。
 
-本仓库为 **生产可部署版本**，采用 **前端 / 后端 / 数据库 三容器架构**，  
-适用于私有化部署、商业化运营及后续规模化扩展。
+本仓库为 **生产可部署版本**，采用 **前端 / 后端 / 数据库 三容器架构**，适用于私有化部署、商业化运营及后续规模化扩展。
 
 ---
 
 ## ✨ 核心特性
 
-- ✅ 用户注册 / 登录 / 鉴权（JWT）
-- ✅ 角色与权限体系（Admin / User）
-- ✅ 配额与套餐管理（Quota / Plans）
-- ✅ AI 生成任务管理（Pending / Success / Failed）
-- ✅ 历史记录与审计日志
-- ✅ 前后端完全 Docker 化
-- ✅ 支持 Nginx 反向代理与 SPA 路由
-- ✅ 可对接外部 ComfyUI 推理节点
+- 用户注册 / 登录 / 鉴权（JWT）
+- 角色与权限体系（Admin / User）
+- 配额与套餐管理（Quota / Plans）
+- AI 生成任务管理（Pending / Success / Failed）
+- 历史记录与审计日志
+- 前后端完全 Docker 化
+- Nginx 反向代理与 SPA 路由支持
+- 可对接外部 ComfyUI 推理节点
 
 ---
 
 ## 🧱 技术栈
 
-### 后端
+**后端**
 - Python 3.11
 - FastAPI
 - SQLAlchemy
 - PostgreSQL
 - Gunicorn + UvicornWorker
 
-### 前端
+**前端**
 - Vue 3
 - Vite
 - Pinia
 - Axios
 - Nginx（生产运行）
 
-### 运维
+**运维**
 - Docker
 - Docker Compose
-- Nginx / Nginx Proxy Manager（可选）
 
 ---
 
 ## 📦 项目结构
 
-.
-├── backend/ # 后端服务（FastAPI）
-│ ├── app/
-│ ├── Dockerfile
-│ └── requirements.txt
-│
-├── frontend/ # 前端项目
-│ └── ai-web-g1/
-│ ├── Dockerfile
-│ ├── nginx.conf
-│ ├── .env.production
-│ └── src/
-│
-├── docker-compose.yml # 生产部署入口
-├── docs/ # 项目文档（白皮书 / 架构 / 部署）
-├── scripts/ # 辅助脚本
-└── README.md # 项目入口说明（本文件）
+> 说明：以下结构为仓库真实布局的概览（省略 node_modules/dist/venv 等运行态目录）。
 
-yaml
-复制代码
+```text
+ai-generation-platform/
+├── backend/
+│   ├── app/
+│   ├── Dockerfile
+│   ├── init_aiweb.sql
+│   ├── requirements.txt
+│   └── requirements.lock.txt
+├── frontend/
+│   └── ai-web-g1/
+│       ├── Dockerfile
+│       ├── nginx.conf
+│       ├── .env.production
+│       └── src/
+├── docker-compose.yml
+├── docs/
+├── scripts/
+└── README.md
 
 ---
-
 
 ## 🚀 快速启动（Docker）
 
