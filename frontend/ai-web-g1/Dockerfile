@@ -31,6 +31,11 @@ RUN rm -rf /usr/share/nginx/html/*
 # 拷贝前端构建产物（唯一交付物）
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# =========================
+# v1.0.8 新增：覆盖 nginx 默认配置（仅此一行）
+# =========================
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # 拷贝运行期注入脚本
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
