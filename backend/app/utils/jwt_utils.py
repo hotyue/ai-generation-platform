@@ -3,7 +3,7 @@ from typing import Optional
 
 from jose import jwt, JWTError
 
-from app.config import JWT_SECRET, JWT_ALGORITHM
+from backend.app.config import JWT_SECRET, JWT_ALGORITHM
 
 
 def create_access_token(data: dict, expires_minutes: int = 60 * 24 * 7) -> str:

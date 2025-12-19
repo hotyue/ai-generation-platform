@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from app.utils.http_client import call_generate, call_result
+from backend.app.utils.http_client import call_generate, call_result
 
 router = APIRouter(prefix="/task", tags=["Task"])
 

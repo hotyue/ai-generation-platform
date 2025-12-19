@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, Depends
-from app.ws.manager import manager
-from app.routers.auth import get_current_user_ws  # 你已有 auth，可复用
+from backend.app.ws.manager import manager
+from backend.app.routers.auth import get_current_user_ws  # 你已有 auth，可复用
 
 router = APIRouter()
 

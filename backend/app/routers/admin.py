@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.models.user import User
-from app.models.plan import Plan
-from app.models.quota_log import QuotaLog   # ✅ 新增
-from app.routers.auth import get_current_user
-from app.utils.user_events import emit_user_quota_event
+from backend.app.database import get_db
+from backend.app.models.user import User
+from backend.app.models.plan import Plan
+from backend.app.models.quota_log import QuotaLog   # ✅ 新增
+from backend.app.routers.auth import get_current_user
+from backend.app.utils.user_events import emit_user_quota_event
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 

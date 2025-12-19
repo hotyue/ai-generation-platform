@@ -2,10 +2,10 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.models.quota_log import QuotaLog
-from app.models.user import User
-from app.routers.auth import get_current_user
+from backend.app.database import get_db
+from backend.app.models.quota_log import QuotaLog
+from backend.app.models.user import User
+from backend.app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/quota", tags=["Quota"])
 

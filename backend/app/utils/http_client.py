@@ -1,6 +1,6 @@
 import requests
 from urllib.parse import urlparse, urlunparse
-from app.config import COMFY_API_BASE
+from backend.app.config import COMFY_API_BASE
 
 
 def _force_https(url: str) -> str:

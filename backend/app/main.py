@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import task, generate, history, auth
-from app.routers import admin, plan, quota
+from backend.app.routers import task, generate, history, auth, admin, plan, quota
+#from backend.app.routers import admin, plan, quota
 
 app = FastAPI(title="AI Generation Platform Backend")
 

@@ -1,5 +1,5 @@
 import uuid, time, logging, asyncio
-from app.ws.manager import manager
+from backend.app.ws.manager import manager
 
 logger = logging.getLogger(__name__)
 
