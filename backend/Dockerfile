@@ -1,60 +1,44 @@
-# =========================
-# Backend - Production Image (FINAL · v1.0.3)
-# =========================
-
 FROM python:3.11-slim
 
-# ---------- Python runtime ----------
+# =========================
+# Runtime environment
+# =========================
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONUNBUFFERED=1
 
-WORKDIR /app
-
-# ---------- System dependencies ----------
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       build-essential \
-       libpq-dev \
-       postgresql-client \
-       curl \
+# =========================
+# System dependencies
+# =========================
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# ---------- Python dependencies ----------
-COPY requirements.txt requirements.lock.txt* ./
+# =========================
+# Set project root as WORKDIR
+# =========================
+WORKDIR /ai-generation-platform
 
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+# =========================
+# Python dependencies (locked)
+# =========================
+COPY backend/requirements.lock.txt ./requirements.lock.txt
+RUN pip install --no-cache-dir \
+    -r requirements.lock.txt
 
-# ---------- Application code ----------
-COPY app ./app
-COPY init_aiweb.sql ./init_aiweb.sql
+# =========================
+# Application source
+# =========================
+COPY backend ./backend
 
-# ---------- Non-root user ----------
-RUN useradd -m aiweb \
-    && chown -R aiweb:aiweb /app
-
-USER aiweb
-
-# ---------- Runtime ----------
+# =========================
+# Network
+# =========================
 EXPOSE 8000
 
-# ---------- Entry (DB wait + DB init + app start) ----------
-CMD sh -c '\
-    if [ -n "$DATABASE_URL" ]; then \
-        echo "[v1.0.3] Waiting for database to be ready..."; \
-        until pg_isready -d "$DATABASE_URL"; do \
-            sleep 1; \
-        done; \
-        echo "[v1.0.3] Database is ready"; \
-        echo "[v1.0.3] Running database init (idempotent)"; \
-        psql "$DATABASE_URL" -f /app/init_aiweb.sql || true; \
-    else \
-        echo "[v1.0.3] DATABASE_URL not set, skip db wait & init"; \
-    fi; \
-    exec gunicorn app.main:app \
-        -k uvicorn.workers.UvicornWorker \
-        --bind 0.0.0.0:8000 \
-        --workers 2 \
-        --timeout 120 \
-'
+# =========================
+# Entrypoint (aligned with systemd)
+# =========================
+CMD ["gunicorn", "backend.app.main:app", \
+     "-k", "uvicorn.workers.UvicornWorker", \
+     "--bind", "0.0.0.0:8000"]
