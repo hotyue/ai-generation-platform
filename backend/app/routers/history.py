@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -5,12 +7,16 @@ from backend.app.database import get_db
 from backend.app.models.history import History
 from backend.app.models.user import User
 from backend.app.routers.auth import get_current_user
+from backend.app.schemas.history import HistoryItem
 from backend.app.utils.http_client import call_result
 
 router = APIRouter(prefix="/history", tags=["History"])
 
 
-@router.get("/")
+@router.get(
+    "/",
+    response_model=List[HistoryItem],
+)
 def list_history(
     # =========================
     # E2：可选分页参数
@@ -46,14 +52,11 @@ def list_history(
 
     records = query.all()
 
-    results = []
-
+    # =========================
+    # 懒回写 image_url + status
+    # （保留原有业务语义，不影响 v1.0.7）
+    # =========================
     for h in records:
-        image_url = h.image_url
-
-        # =========================
-        # 懒回写 image_url + status
-        # =========================
         if h.status == "pending":
             try:
                 result = call_result(h.task_id)
@@ -61,8 +64,7 @@ def list_history(
                 if result and result.get("status") == "success":
                     images = result.get("images", [])
                     if images:
-                        image_url = images[0].get("url")
-                        h.image_url = image_url
+                        h.image_url = images[0].get("url")
                         h.status = "success"
                         db.add(h)
                         db.commit()
@@ -76,16 +78,9 @@ def list_history(
                 # 任何异常都不影响列表返回
                 pass
 
-        results.append({
-            "id": h.id,
-            "task_id": h.task_id,
-            "prompt": h.prompt,
-            "image_url": image_url,
-            "status": h.status,
-            "created_at": h.created_at,
-        })
-
     # =========================
-    # 返回结构：完全兼容旧版
+    # ⚠️ v1.0.7 核心修复点
+    # 不再手工拼 dict
+    # 直接返回 ORM，由 response_model 触发 UTCModel
     # =========================
-    return results
+    return records
