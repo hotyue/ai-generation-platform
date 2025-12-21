@@ -99,6 +99,13 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=400, detail="用户名或密码错误")
 
+    # v1.0.9：封禁账号禁止登录
+    if user.account_status == "banned":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="账号已被封禁"
+        )
+
     access_token = create_access_token(data={"sub": str(user.id)})
     return Token(access_token=access_token)
 

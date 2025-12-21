@@ -279,3 +279,108 @@ def enable_plan(
         "msg": "套餐已启用",
         "plan_id": plan.id,
     }
+
+# 设为受限
+@router.post("/users/{user_id}/restrict")
+def restrict_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_admin(current_user)
+
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    if user.account_status != "normal":
+        raise HTTPException(status_code=409, detail="当前状态不可设为受限")
+
+    user.account_status = "restricted"
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "msg": "用户已设为受限",
+        "user_id": user.id,
+        "account_status": user.account_status,
+    }
+
+# 解除受限
+@router.post("/users/{user_id}/unrestrict")
+def unrestrict_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_admin(current_user)
+
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    if user.account_status != "restricted":
+        raise HTTPException(status_code=409, detail="当前状态不可解除受限")
+
+    user.account_status = "normal"
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "msg": "用户受限状态已解除",
+        "user_id": user.id,
+        "account_status": user.account_status,
+    }
+
+# 封禁账号
+@router.post("/users/{user_id}/ban")
+def ban_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_admin(current_user)
+
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    user.account_status = "banned"
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "msg": "用户已封禁",
+        "user_id": user.id,
+        "account_status": user.account_status,
+    }
+
+# 解除封禁
+@router.post("/users/{user_id}/unban")
+def unban_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_admin(current_user)
+
+    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    if user.account_status != "banned":
+        raise HTTPException(status_code=409, detail="当前状态不可解封")
+
+    user.account_status = "normal"
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "msg": "用户已解封",
+        "user_id": user.id,
+        "account_status": user.account_status,
+    }

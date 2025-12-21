@@ -20,6 +20,14 @@ class User(Base):
     role = Column(String(20), default="user")  # user / admin
     quota = Column(BigInteger, default=0)      # 剩余可用生成次数或积分
 
+    # 执行态（v1.0.9 引入）
+    account_status = Column(
+        String(16),
+        nullable=False,
+        default="normal"
+    )  # normal / restricted / banned
+
+
     # 账户状态
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)

@@ -22,6 +22,14 @@ def generate_for_user(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
+    # v1.0.9：非 normal 状态禁止生成
+    if current_user.account_status != "normal":
+        raise HTTPException(
+            status_code=403,
+            detail="账号当前状态不可生成"
+        )
+
     # 1️⃣ quota 校验（最终仍由后端兜底）
     if current_user.quota <= 0:
         raise HTTPException(status_code=400, detail="生成次数不足，请充值")
