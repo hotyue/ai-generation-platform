@@ -38,6 +38,15 @@
         </div>
 
         <div class="plan-actions">
+          <!-- 编辑 -->
+          <button
+            class="btn"
+            :disabled="editingPlan && editingPlan.id !== plan.id"
+            @click="openEdit(plan)"
+          >
+            编辑
+          </button>
+
           <button
             v-if="plan.is_active"
             class="btn danger"
@@ -66,30 +75,33 @@
       <div class="modal">
         <h2>新增套餐</h2>
 
-        <input
-          v-model="form.name"
-          placeholder="套餐名称"
-        />
-
-        <input
-          v-model.number="form.quota"
-          type="number"
-          placeholder="额度（次数）"
-        />
-
-        <input
-          v-model.number="form.price"
-          type="number"
-          placeholder="价格（元）"
-        />
+        <input v-model="form.name" placeholder="套餐名称" />
+        <input v-model.number="form.quota" type="number" placeholder="额度（次数）" />
+        <input v-model.number="form.price" type="number" placeholder="价格（元）" />
 
         <div class="modal-actions">
-          <button class="btn" @click="showCreate = false">
-            取消
-          </button>
-          <button class="btn primary" @click="createPlan">
-            创建
-          </button>
+          <button class="btn" @click="showCreate = false">取消</button>
+          <button class="btn primary" @click="createPlan">创建</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑套餐弹窗 -->
+    <div
+      v-if="editingPlan"
+      class="modal-mask"
+      @click.self="cancelEdit"
+    >
+      <div class="modal">
+        <h2>编辑套餐</h2>
+
+        <input v-model="editForm.name" placeholder="套餐名称" />
+        <input v-model.number="editForm.quota" type="number" placeholder="额度（次数）" />
+        <input v-model.number="editForm.price" type="number" placeholder="价格（元）" />
+
+        <div class="modal-actions">
+          <button class="btn" @click="cancelEdit">取消</button>
+          <button class="btn primary" @click="submitEdit">保存</button>
         </div>
       </div>
     </div>
@@ -101,6 +113,7 @@ import { ref, onMounted } from 'vue'
 import {
   fetchAdminPlans,
   createAdminPlan,
+  updateAdminPlan,
   disableAdminPlan,
   enableAdminPlan,
 } from '@/api'
@@ -116,16 +129,20 @@ const form = ref({
   price: 0,
 })
 
-/* =========================
-   获取套餐列表
-========================= */
+// 编辑态
+const editingPlan = ref(null)
+const editForm = ref({
+  name: '',
+  quota: 0,
+  price: 0,
+})
+
+/* 获取套餐列表 */
 const fetchPlans = async () => {
   loading.value = true
   error.value = ''
-
   try {
     plans.value = await fetchAdminPlans()
-/*    plans.value = data  */
   } catch (e) {
     console.error(e)
     error.value = '获取套餐失败'
@@ -134,9 +151,7 @@ const fetchPlans = async () => {
   }
 }
 
-/* =========================
-   新增套餐
-========================= */
+/* 新增套餐 */
 const createPlan = async () => {
   if (!form.value.name || form.value.quota <= 0) {
     alert('请输入完整套餐信息')
@@ -145,7 +160,6 @@ const createPlan = async () => {
 
   try {
     await createAdminPlan(form.value)
-
     showCreate.value = false
     form.value = { name: '', quota: 0, price: 0 }
     fetchPlans()
@@ -155,9 +169,7 @@ const createPlan = async () => {
   }
 }
 
-/* =========================
-   启用 / 停用
-========================= */
+/* 启用 / 停用 */
 const disablePlan = async (plan) => {
   try {
     await disableAdminPlan(plan.id)
@@ -173,6 +185,40 @@ const enablePlan = async (plan) => {
     fetchPlans()
   } catch (e) {
     alert('启用失败')
+  }
+}
+
+/* 编辑套餐 */
+const openEdit = (plan) => {
+  editingPlan.value = plan
+  editForm.value = {
+    name: plan.name,
+    quota: plan.quota,
+    price: plan.price,
+  }
+}
+
+const cancelEdit = () => {
+  editingPlan.value = null
+}
+
+const submitEdit = async () => {
+  if (!editingPlan.value) return
+
+  try {
+    await updateAdminPlan(editingPlan.value.id, {
+      name: editForm.value.name,
+      quota: editForm.value.quota,
+      price: editForm.value.price,
+    })
+    editingPlan.value = null
+    fetchPlans()
+  } catch (e) {
+    console.error(e)
+    const msg =
+      e?.response?.data?.detail ||
+      '修改套餐失败（后端校验未通过）'
+    alert(msg)
   }
 }
 
@@ -270,7 +316,6 @@ onMounted(fetchPlans)
   color: red;
 }
 
-/* ===== Modal ===== */
 .modal-mask {
   position: fixed;
   inset: 0;

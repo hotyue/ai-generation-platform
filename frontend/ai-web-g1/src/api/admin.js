@@ -9,6 +9,11 @@ export function createAdminPlan(data) {
   return http.post('/admin/plans', data)
 }
 
+// 新增：管理员修改套餐
+export function updateAdminPlan(id, data) {
+  return http.put(`/admin/plans/${id}`, data)
+}
+
 export function disableAdminPlan(id) {
   return http.post(`/admin/plans/${id}/disable`)
 }

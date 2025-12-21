@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Numeric
 from datetime import datetime
 
 from backend.app.database import Base
@@ -15,7 +15,9 @@ class Plan(Base):
     quota = Column(Integer, nullable=False)
     duration_days = Column(Integer)
 
-    price = Column(Integer, default=0)
+    # ✅ 金额字段：与数据库 numeric(10,2) 对齐
+    price = Column(Numeric(10, 2), default=0)
+
     is_active = Column(Boolean, default=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)

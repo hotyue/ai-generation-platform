@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app.models.user import User
 from backend.app.models.plan import Plan
+from backend.app.schemas.plan import PlanUpdate
 from backend.app.models.quota_log import QuotaLog   # ✅ 新增
 from backend.app.routers.auth import get_current_user
 from backend.app.utils.user_events import emit_user_quota_event
@@ -229,6 +230,39 @@ def create_plan(
 
     return {
         "msg": "套餐创建成功",
+        "plan": plan,
+    }
+
+# =========================
+# 4️⃣-1️⃣ 管理员修改套餐
+# =========================
+@router.put("/plans/{plan_id}")
+def update_plan(
+    plan_id: int,
+    payload: PlanUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_admin(current_user)
+
+    plan = db.query(Plan).filter(Plan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="套餐不存在")
+
+    update_data = payload.dict(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="未提供任何可修改字段")
+
+    for field, value in update_data.items():
+        setattr(plan, field, value)
+
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
+
+    return {
+        "msg": "套餐修改成功",
         "plan": plan,
     }
 
