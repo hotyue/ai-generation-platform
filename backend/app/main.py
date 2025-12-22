@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.routers import task, generate, history, auth, admin, plan, quota
-# from backend.app.routers import admin, plan, quota
+from backend.app.middlewares.account_status import AccountStatusMiddleware  # ✅ v1.0.10 新增
 
 app = FastAPI(title="AI Generation Platform Backend")
 
@@ -25,6 +25,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# =========================
+# ✅ v1.0.10：account_status 统一中间件（全局兜底）
+# ⚠️ 必须在 include_router 之前
+# =========================
+app.add_middleware(AccountStatusMiddleware)
 
 # =========================
 # ✅ 统一 API 前缀
