@@ -2,40 +2,81 @@
   <div class="generate-page">
     <h1>文生图</h1>
 
-    <!-- 输入 -->
-    <textarea
-      v-model="prompt"
-      placeholder="请输入生成提示词"
-      class="textarea"
-      :disabled="isGenerating || authStore.quota <= 0"
-    ></textarea>
+    <!-- =========================
+         用户状态加载中
+    ========================= -->
+    <p v-if="userLoading" class="loading">
+      用户信息加载中...
+    </p>
 
-    <!-- ⭐ 按钮态升级 -->
-    <button
-      class="btn"
-      :disabled="!canGenerate"
-      @click="handleGenerate"
-    >
-      <span v-if="isGenerating">生成中...</span>
-      <span v-else-if="authStore.quota <= 0">次数不足</span>
-      <span v-else>开始生成</span>
-    </button>
+    <template v-else>
+      <!-- =========================
+           输入框
+      ========================= -->
+      <textarea
+        v-model="prompt"
+        class="textarea"
+        placeholder="请输入生成提示词"
+        :disabled="textareaDisabled"
+      />
 
-    <p v-if="error" class="error">{{ error }}</p>
+      <!-- =========================
+           操作按钮（结构性硬闸）
+      ========================= -->
+      <button
+        v-if="canGenerate"
+        class="btn"
+        @click="handleGenerate"
+      >
+        <span v-if="isGenerating">生成中...</span>
+        <span v-else>开始生成</span>
+      </button>
 
-    <!-- 任务状态 -->
-    <div v-if="taskId" class="task-box">
-      <p><strong>任务 ID：</strong>{{ taskId }}</p>
-      <p><strong>状态：</strong>{{ statusText }}</p>
-      <p v-if="quotaLeft !== null">
-        <strong>剩余次数：</strong>{{ quotaLeft }}
+      <!-- 不可生成态：无 click -->
+      <button
+        v-else
+        class="btn"
+        disabled
+      >
+        <span v-if="accountStatus === 'restricted'">不可生成（账号受限）</span>
+        <span v-else-if="accountStatus === 'banned'">账号已封禁</span>
+        <span v-else-if="authStore.quota <= 0">次数不足</span>
+        <span v-else>不可用</span>
+      </button>
+
+      <!-- =========================
+           状态提示
+      ========================= -->
+      <p v-if="accountStatus === 'restricted'" class="warn">
+        当前账号为受限状态，部分功能不可用
       </p>
-    </div>
 
-    <!-- 图片展示 -->
-    <div v-if="imageUrl" class="image-box">
-      <img :src="imageUrl" alt="生成结果" />
-    </div>
+      <p v-if="accountStatus === 'banned'" class="error">
+        当前账号已被封禁
+      </p>
+
+      <p v-if="error" class="error">
+        {{ error }}
+      </p>
+
+      <!-- =========================
+           任务状态
+      ========================= -->
+      <div v-if="taskId" class="task-box">
+        <p><strong>任务 ID：</strong>{{ taskId }}</p>
+        <p><strong>状态：</strong>{{ statusText }}</p>
+        <p v-if="quotaLeft !== null">
+          <strong>剩余次数：</strong>{{ quotaLeft }}
+        </p>
+      </div>
+
+      <!-- =========================
+           图片展示
+      ========================= -->
+      <div v-if="imageUrl" class="image-box">
+        <img :src="imageUrl" alt="生成结果" />
+      </div>
+    </template>
   </div>
 </template>
 
@@ -44,8 +85,31 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { createGenerateTask, fetchHistory } from '@/api'
 
+/**
+ * =========================
+ * Store（唯一来源）
+ * =========================
+ */
 const authStore = useAuthStore()
 
+/**
+ * =========================
+ * 用户加载态
+ * =========================
+ */
+const userLoading = computed(() => {
+  return authStore.token && !authStore.user
+})
+
+const accountStatus = computed(() => {
+  return authStore.user?.account_status ?? 'normal'
+})
+
+/**
+ * =========================
+ * 本地状态
+ * =========================
+ */
 const prompt = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -57,12 +121,30 @@ const imageUrl = ref('')
 
 let timer = null
 
+/**
+ * =========================
+ * 派生状态
+ * =========================
+ */
 const isGenerating = computed(() => {
   return loading.value || status.value === 'pending'
 })
 
+const textareaDisabled = computed(() => {
+  return (
+    isGenerating.value ||
+    authStore.quota <= 0 ||
+    accountStatus.value !== 'normal'
+  )
+})
+
 const canGenerate = computed(() => {
-  return authStore.quota > 0 && !isGenerating.value
+  return (
+    !userLoading.value &&
+    !isGenerating.value &&
+    authStore.quota > 0 &&
+    accountStatus.value === 'normal'
+  )
 })
 
 const statusText = computed(() => {
@@ -73,49 +155,44 @@ const statusText = computed(() => {
 })
 
 /**
+ * =========================
  * 提交生成任务
+ * =========================
  */
 const handleGenerate = async () => {
   if (!canGenerate.value) return
-
-  error.value = ''
-  imageUrl.value = ''
-  taskId.value = ''
-  status.value = ''
 
   if (!prompt.value) {
     error.value = '请输入提示词'
     return
   }
 
-  if (authStore.quota <= 0) {
-    error.value = '生成次数不足，请充值'
-    return
-  }
-
+  error.value = ''
   loading.value = true
+  imageUrl.value = ''
+  taskId.value = ''
+  status.value = ''
 
   try {
     const res = await createGenerateTask(prompt.value)
 
     taskId.value = res.task_id
     quotaLeft.value = res.quota_left
-
     authStore.setQuota(res.quota_left)
 
     status.value = 'pending'
     prompt.value = ''
 
     startPolling()
-  } catch {
-    // 错误提示已由 http.js 统一处理
   } finally {
     loading.value = false
   }
 }
 
 /**
- * 轮询任务状态
+ * =========================
+ * 轮询
+ * =========================
  */
 const startPolling = () => {
   stopPolling()
@@ -123,7 +200,6 @@ const startPolling = () => {
   timer = setInterval(async () => {
     try {
       const list = await fetchHistory()
-
       const record = list.find(
         (item) => item.task_id === taskId.value
       )
@@ -153,11 +229,8 @@ const stopPolling = () => {
   }
 }
 
-onUnmounted(() => {
-  stopPolling()
-})
+onUnmounted(stopPolling)
 </script>
-
 
 <style scoped>
 .generate-page {
@@ -167,6 +240,10 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.loading {
+  color: #666;
 }
 
 .textarea {
@@ -183,6 +260,10 @@ onUnmounted(() => {
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.warn {
+  color: #d97706;
 }
 
 .error {

@@ -2,10 +2,36 @@
   <div class="history-page">
     <h1>生成历史</h1>
 
+    <!-- =========================
+         账号状态提示
+    ========================= -->
+    <div
+      v-if="accountStatus !== 'normal'"
+      class="status-banner"
+      :class="accountStatus"
+    >
+      <span v-if="accountStatus === 'restricted'">
+        当前账号为受限状态：仅可查看历史记录。
+      </span>
+      <span v-else-if="accountStatus === 'banned'">
+        当前账号已被封禁。
+      </span>
+    </div>
+
+    <!-- =========================
+         加载 / 错误
+    ========================= -->
     <div v-if="loading">加载中...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
-    <div v-for="item in list" :key="item.id" class="card">
+    <!-- =========================
+         历史列表
+    ========================= -->
+    <div
+      v-for="item in list"
+      :key="item.id"
+      class="card"
+    >
       <div class="info">
         <div class="prompt">{{ item.prompt }}</div>
 
@@ -33,27 +59,58 @@
       </div>
     </div>
 
-    <!-- 分页 -->
+    <!-- =========================
+         分页
+    ========================= -->
     <div class="pager">
-      <button @click="prevPage" :disabled="offset === 0">
+      <button
+        @click="prevPage"
+        :disabled="offset === 0"
+      >
         上一页
       </button>
-      <button @click="nextPage" :disabled="list.length < limit">
+      <button
+        @click="nextPage"
+        :disabled="list.length < limit"
+      >
         下一页
       </button>
     </div>
 
-    <!-- 大图预览 -->
-    <div v-if="preview" class="preview" @click="preview = ''">
+    <!-- =========================
+         大图预览
+    ========================= -->
+    <div
+      v-if="preview"
+      class="preview"
+      @click="preview = ''"
+    >
       <img :src="preview" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { fetchHistory } from '@/api'
 
+const router = useRouter()
+const authStore = useAuthStore()
+
+/**
+ * =========================
+ * account_status（唯一事实源）
+ * =========================
+ */
+const accountStatus = computed(() => authStore.accountStatus)
+
+/**
+ * =========================
+ * 页面状态
+ * =========================
+ */
 const list = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -65,7 +122,9 @@ const preview = ref('')
 let timer = null
 
 /**
+ * =========================
  * 获取历史记录
+ * =========================
  */
 const loadHistory = async () => {
   loading.value = true
@@ -79,7 +138,11 @@ const loadHistory = async () => {
 
     list.value = data
 
-    const hasPending = data.some(item => item.status === 'pending')
+    // 仅在存在 pending 时轮询
+    const hasPending = data.some(
+      (item) => item.status === 'pending'
+    )
+
     hasPending ? startPolling() : stopPolling()
   } catch (e) {
     error.value = '获取历史失败'
@@ -89,7 +152,9 @@ const loadHistory = async () => {
 }
 
 /**
- * 轮询（仅存在 pending 时）
+ * =========================
+ * 轮询
+ * =========================
  */
 const startPolling = () => {
   if (timer) return
@@ -104,7 +169,9 @@ const stopPolling = () => {
 }
 
 /**
+ * =========================
  * 分页
+ * =========================
  */
 const prevPage = () => {
   if (offset.value === 0) return
@@ -118,7 +185,9 @@ const nextPage = () => {
 }
 
 /**
+ * =========================
  * 工具函数
+ * =========================
  */
 const openPreview = (url) => {
   preview.value = url
@@ -135,16 +204,59 @@ const formatTime = (t) => {
   return new Date(t).toLocaleString()
 }
 
-onMounted(loadHistory)
-onUnmounted(stopPolling)
-</script>
+/**
+ * =========================
+ * 初始化
+ * =========================
+ */
+onMounted(async () => {
+  // 确保 user 已加载
+  if (!authStore.user) {
+    try {
+      await authStore.fetchMe()
+    } catch {
+      router.replace('/login')
+      return
+    }
+  }
 
+  // 🚫 banned 用户：不允许进入
+  if (accountStatus.value === 'banned') {
+    router.replace('/login')
+    return
+  }
+
+  loadHistory()
+})
+
+onUnmounted(() => {
+  stopPolling()
+})
+</script>
 
 <style scoped>
 .history-page {
   max-width: 900px;
   margin: 0 auto;
   padding: 16px;
+}
+
+/* 状态提示条 */
+.status-banner {
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.status-banner.restricted {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.status-banner.banned {
+  background: #fef2f2;
+  color: #991b1b;
 }
 
 .card {

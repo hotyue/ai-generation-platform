@@ -1,9 +1,10 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from backend.app.routers import task, generate, history, auth, admin, plan, quota
-from backend.app.middlewares.account_status import AccountStatusMiddleware  # ✅ v1.0.10 新增
+from backend.app.middlewares.account_status import AccountStatusMiddleware  # v1.0.10
 
 app = FastAPI(title="AI Generation Platform Backend")
 
@@ -27,10 +28,28 @@ app.add_middleware(
 )
 
 # =========================
-# ✅ v1.0.10：account_status 统一中间件（全局兜底）
+# ✅ v1.0.10：account_status 统一中间件
 # ⚠️ 必须在 include_router 之前
 # =========================
 app.add_middleware(AccountStatusMiddleware)
+
+# =========================
+# ⭐ v1.0.10：account_status 统一 Response 出口
+# ⭐ 目的：确保拒绝响应一定携带 CORS 头
+# =========================
+@app.middleware("http")
+async def account_status_response_wrapper(request: Request, call_next):
+    response = await call_next(request)
+
+    denied = getattr(request.state, "account_status_denied", None)
+    if denied:
+        return JSONResponse(
+            status_code=denied["status_code"],
+            content={"detail": denied["detail"]},
+            headers=response.headers,  # ⭐ 保留 CORS / credentials 等头
+        )
+
+    return response
 
 # =========================
 # ✅ 统一 API 前缀

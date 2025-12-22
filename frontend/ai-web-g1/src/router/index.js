@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
 import Login from '../views/Login.vue'
 import Generate from '../views/Generate.vue'
 import History from '../views/History.vue'
@@ -9,11 +11,9 @@ import QuotaLog from '../views/QuotaLog.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminHome from '@/views/admin/AdminHome.vue'
 
-import { useAuthStore } from '@/stores/auth'
-
 const routes = [
   // =========================
-  // 登录页（未登录可访问）
+  // 登录 / 注册（未登录）
   // =========================
   {
     path: '/login',
@@ -24,11 +24,11 @@ const routes = [
   {
     path: '/register',
     component: () => import('@/views/Register.vue'),
-    meta: { guest: true }
+    meta: { guestOnly: true },
   },
 
   // =========================
-  // 用户端（登录后，MainLayout）
+  // 用户端（登录后）
   // =========================
   {
     path: '/',
@@ -68,14 +68,14 @@ const routes = [
   },
 
   // =========================
-  // Admin 后台（G6-1）
+  // Admin 后台
   // =========================
   {
     path: '/admin',
     component: AdminLayout,
     meta: {
       requiresAuth: true,
-      requiresAdmin: true, // ⭐ 关键标识
+      requiresAdmin: true,
     },
     children: [
       {
@@ -87,7 +87,6 @@ const routes = [
         path: 'users',
         name: 'AdminUsers',
         component: () => import('@/views/admin/AdminUsers.vue'),
-        meta: { requiresAdmin: true },
       },
       {
         path: 'plans',
@@ -105,29 +104,34 @@ const router = createRouter({
 
 /**
  * =========================
- * 全局路由守卫（含 Admin 权限）
+ * 全局路由守卫（v1.0.10 冻结版）
  * =========================
  */
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   const isLoggedIn = authStore.isLoggedIn
 
-  // 1️⃣ 未登录 → 访问需要登录的页面
+  // =========================
+  // 1️⃣ 未登录 → 访问受保护页面
+  // =========================
   if (to.meta.requiresAuth && !isLoggedIn) {
     next('/login')
     return
   }
 
-  // 2️⃣ 已登录 → 再访问登录页
+  // =========================
+  // 2️⃣ 已登录 → 访问登录 / 注册
+  // =========================
   if (to.meta.guestOnly && isLoggedIn) {
     next('/generate')
     return
   }
 
-  // 3️⃣ Admin 权限校验（关键修复点）
+  // =========================
+  // 3️⃣ Admin 权限裁决（只按 role）
+  // =========================
   if (to.meta.requiresAdmin) {
     try {
-      // ⭐ 如果 user 还没加载，先拉一次
       if (!authStore.user) {
         await authStore.fetchMe()
       }
@@ -136,8 +140,39 @@ router.beforeEach(async (to, from, next) => {
         next('/generate')
         return
       }
-    } catch (e) {
-      next('/generate')
+    } catch {
+      authStore.clearToken()
+      next('/login')
+      return
+    }
+  }
+
+  // =========================
+  // 4️⃣ account_status 路由级兜底（关键）
+  // =========================
+  if (isLoggedIn && to.meta.requiresAuth) {
+    try {
+      if (!authStore.user) {
+        await authStore.fetchMe()
+      }
+
+      const status = authStore.accountStatus
+
+      // 🚫 封禁账号：强制清空并回登录页
+      if (status === 'banned') {
+        authStore.clearToken()
+        next('/login')
+        return
+      }
+
+      // 🚧 受限账号：禁止进入 generate
+      if (status === 'restricted' && to.path === '/generate') {
+        next('/history')
+        return
+      }
+    } catch {
+      authStore.clearToken()
+      next('/login')
       return
     }
   }

@@ -5,6 +5,7 @@ import { setToken, clearToken } from '../utils/auth'
 export const useUserStore = defineStore('user', {
   state: () => ({
     user: null,
+    accountStatus: null, // normal / restricted / banned
   }),
 
   actions: {
@@ -15,11 +16,14 @@ export const useUserStore = defineStore('user', {
     },
 
     async fetchMe() {
-      this.user = await getMe()
+      const me = await getMe()
+      this.user = me
+      this.accountStatus = me.account_status
     },
 
     logout() {
       this.user = null
+      this.accountStatus = null
       clearToken()
     },
   },

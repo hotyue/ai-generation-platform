@@ -2,12 +2,36 @@
   <div class="quota-page">
     <h1>额度变动记录</h1>
 
-    <!-- 加载 / 错误 -->
+    <!-- =========================
+         账号状态提示
+    ========================= -->
+    <div
+      v-if="accountStatus !== 'normal'"
+      class="status-banner"
+      :class="accountStatus"
+    >
+      <span v-if="accountStatus === 'restricted'">
+        当前账号为受限状态：仅可查看额度变动记录。
+      </span>
+      <span v-else-if="accountStatus === 'banned'">
+        当前账号已被封禁。
+      </span>
+    </div>
+
+    <!-- =========================
+         加载 / 错误
+    ========================= -->
     <div v-if="loading">加载中...</div>
     <div v-if="error" class="error">{{ error }}</div>
 
-    <!-- 列表 -->
-    <div v-for="item in list" :key="item.id" class="row">
+    <!-- =========================
+         列表
+    ========================= -->
+    <div
+      v-for="item in list"
+      :key="item.id"
+      class="row"
+    >
       <div class="left">
         <div
           class="change"
@@ -27,16 +51,25 @@
     </div>
 
     <!-- 空态 -->
-    <div v-if="!loading && list.length === 0" class="empty">
+    <div
+      v-if="!loading && list.length === 0"
+      class="empty"
+    >
       暂无额度变动记录
     </div>
 
     <!-- 分页 -->
     <div class="pager">
-      <button @click="prevPage" :disabled="offset === 0">
+      <button
+        @click="prevPage"
+        :disabled="offset === 0"
+      >
         上一页
       </button>
-      <button @click="nextPage" :disabled="list.length < limit">
+      <button
+        @click="nextPage"
+        :disabled="list.length < limit"
+      >
         下一页
       </button>
     </div>
@@ -44,9 +77,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { fetchQuotaLogs } from '@/api'
 
+const router = useRouter()
+const authStore = useAuthStore()
+
+/**
+ * =========================
+ * account_status（唯一事实源）
+ * =========================
+ */
+const accountStatus = computed(() => authStore.accountStatus)
+
+/**
+ * =========================
+ * 页面状态
+ * =========================
+ */
 const list = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -55,7 +105,9 @@ const limit = 10
 const offset = ref(0)
 
 /**
- * reason → 中文说明
+ * =========================
+ * 工具函数
+ * =========================
  */
 const reasonText = (reason) => {
   if (!reason) return '未知变动'
@@ -74,7 +126,9 @@ const formatTime = (t) => {
 }
 
 /**
+ * =========================
  * 获取额度日志
+ * =========================
  */
 const fetchLogs = async () => {
   loading.value = true
@@ -85,7 +139,6 @@ const fetchLogs = async () => {
       limit,
       offset: offset.value,
     })
-
     list.value = res
   } catch (e) {
     console.error(e)
@@ -95,6 +148,11 @@ const fetchLogs = async () => {
   }
 }
 
+/**
+ * =========================
+ * 分页
+ * =========================
+ */
 const prevPage = () => {
   if (offset.value === 0) return
   offset.value -= limit
@@ -106,7 +164,30 @@ const nextPage = () => {
   fetchLogs()
 }
 
-onMounted(fetchLogs)
+/**
+ * =========================
+ * 初始化
+ * =========================
+ */
+onMounted(async () => {
+  // 确保 user 已加载
+  if (!authStore.user) {
+    try {
+      await authStore.fetchMe()
+    } catch {
+      router.replace('/login')
+      return
+    }
+  }
+
+  // 🚫 banned 用户：不允许进入
+  if (accountStatus.value === 'banned') {
+    router.replace('/login')
+    return
+  }
+
+  fetchLogs()
+})
 </script>
 
 <style scoped>
@@ -114,6 +195,24 @@ onMounted(fetchLogs)
   max-width: 720px;
   margin: 0 auto;
   padding: 16px;
+}
+
+/* 状态提示条 */
+.status-banner {
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.status-banner.restricted {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.status-banner.banned {
+  background: #fef2f2;
+  color: #991b1b;
 }
 
 .row {

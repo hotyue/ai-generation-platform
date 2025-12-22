@@ -18,6 +18,17 @@
         <span>{{ me?.role || '--' }}</span>
       </div>
 
+      <!-- ✅ 新增：账户状态展示 -->
+      <div class="row">
+        <span class="label">账户状态</span>
+        <span
+          class="status"
+          :class="accountStatus"
+        >
+          {{ accountStatusText }}
+        </span>
+      </div>
+
       <div class="row">
         <span class="label">注册时间</span>
         <span>{{ formatTime(me?.created_at) }}</span>
@@ -114,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   getMe,
   fetchPlans,
@@ -139,6 +150,24 @@ const fetchMe = async () => {
     console.error('获取用户信息失败', e)
   }
 }
+
+// =========================
+// 账户状态（仅展示）
+// =========================
+const accountStatus = computed(() => {
+  return me.value?.account_status || 'normal'
+})
+
+const accountStatusText = computed(() => {
+  switch (accountStatus.value) {
+    case 'restricted':
+      return '受限（部分功能不可用）'
+    case 'banned':
+      return '已封禁（禁止使用）'
+    default:
+      return '正常'
+  }
+})
 
 // =========================
 // 套餐（只读）
@@ -188,7 +217,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* —— 样式保持你原来的，不动 —— */
 .profile-page {
   max-width: 900px;
   margin: 0 auto;
@@ -217,6 +245,22 @@ onMounted(() => {
 
 .label {
   color: #666;
+}
+
+/* ===== 账户状态样式 ===== */
+.status.normal {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.status.restricted {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.status.banned {
+  color: #dc2626;
+  font-weight: 600;
 }
 
 .quota-box {
