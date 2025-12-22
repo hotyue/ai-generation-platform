@@ -18,13 +18,9 @@
         <span>{{ me?.role || '--' }}</span>
       </div>
 
-      <!-- ✅ 新增：账户状态展示 -->
       <div class="row">
         <span class="label">账户状态</span>
-        <span
-          class="status"
-          :class="accountStatus"
-        >
+        <span class="status" :class="accountStatus">
           {{ accountStatusText }}
         </span>
       </div>
@@ -36,9 +32,24 @@
     </section>
 
     <!-- =========================
-         配额信息
+         封禁提示（强提示）
     ========================= -->
-    <section class="card">
+    <section
+      v-if="accountStatus === 'banned'"
+      class="card banned-hint"
+    >
+      当前账号已被封禁，所有生成、额度、套餐相关功能均不可用。
+      <br />
+      如有疑问，请联系管理员。
+    </section>
+
+    <!-- =========================
+         配额信息（仅 normal / restricted）
+    ========================= -->
+    <section
+      v-if="accountStatus !== 'banned'"
+      class="card"
+    >
       <h2>🎯 当前配额</h2>
 
       <div class="quota-box">
@@ -56,9 +67,12 @@
     </section>
 
     <!-- =========================
-         最近额度变动
+         最近额度变动（仅 normal / restricted）
     ========================= -->
-    <section class="card">
+    <section
+      v-if="accountStatus !== 'banned'"
+      class="card"
+    >
       <h2>📊 最近额度变动</h2>
 
       <div v-if="quotaLogs.length === 0" class="empty">
@@ -88,21 +102,28 @@
       </div>
 
       <p class="hint">
-        仅展示最近 5 条记录，完整记录请前往额度明细页
+        仅展示最近 5 条记录
       </p>
     </section>
 
     <!-- =========================
-         套餐列表（只读）
+         套餐列表（仅 normal / restricted）
     ========================= -->
-    <section class="card">
+    <section
+      v-if="accountStatus !== 'banned'"
+      class="card"
+    >
       <h2>📦 可用套餐</h2>
 
       <div v-if="plans.length === 0" class="empty">
         暂无套餐
       </div>
 
-      <div v-for="plan in plans" :key="plan.id" class="plan">
+      <div
+        v-for="plan in plans"
+        :key="plan.id"
+        class="plan"
+      >
         <div class="plan-info">
           <div class="plan-name">{{ plan.name }}</div>
           <div class="plan-meta">
@@ -126,11 +147,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import {
-  getMe,
-  fetchPlans,
-  fetchQuotaLogs,
-} from '@/api'
+import { getMe, fetchPlans, fetchQuotaLogs } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -139,21 +156,17 @@ const me = ref(null)
 const plans = ref([])
 const quotaLogs = ref([])
 
-// =========================
-// 当前用户
-// =========================
+/* =========================
+   当前用户
+========================= */
 const fetchMe = async () => {
-  try {
-    me.value = await getMe()
-    authStore.setUser(me.value)
-  } catch (e) {
-    console.error('获取用户信息失败', e)
-  }
+  me.value = await getMe()
+  authStore.setUser(me.value)
 }
 
-// =========================
-// 账户状态（仅展示）
-// =========================
+/* =========================
+   账户状态
+========================= */
 const accountStatus = computed(() => {
   return me.value?.account_status || 'normal'
 })
@@ -169,29 +182,23 @@ const accountStatusText = computed(() => {
   }
 })
 
-// =========================
-// 套餐（只读）
-// =========================
+/* =========================
+   套餐（仅允许时加载）
+========================= */
 const loadPlans = async () => {
-  try {
-    plans.value = await fetchPlans()
-  } catch (e) {
-    console.error('获取套餐失败', e)
-  }
+  if (accountStatus.value === 'banned') return
+  plans.value = await fetchPlans()
 }
 
-// =========================
-// 最近额度记录
-// =========================
+/* =========================
+   最近额度记录（仅允许时加载）
+========================= */
 const loadQuotaLogs = async () => {
-  try {
-    quotaLogs.value = await fetchQuotaLogs({
-      limit: 5,
-      offset: 0,
-    })
-  } catch (e) {
-    console.error('获取额度记录失败', e)
-  }
+  if (accountStatus.value === 'banned') return
+  quotaLogs.value = await fetchQuotaLogs({
+    limit: 5,
+    offset: 0,
+  })
 }
 
 const reasonText = (reason) => {
@@ -209,10 +216,16 @@ const formatTime = (t) => {
   return new Date(t).toLocaleString()
 }
 
-onMounted(() => {
-  fetchMe()
-  loadPlans()
-  loadQuotaLogs()
+onMounted(async () => {
+  await fetchMe()
+
+  // ⭐ 根据 account_status 决定是否继续请求
+  if (accountStatus.value !== 'banned') {
+    await Promise.all([
+      loadPlans(),
+      loadQuotaLogs(),
+    ])
+  }
 })
 </script>
 
@@ -247,15 +260,13 @@ onMounted(() => {
   color: #666;
 }
 
-/* ===== 账户状态样式 ===== */
+/* ===== 账户状态 ===== */
 .status.normal {
   color: #16a34a;
-  font-weight: 500;
 }
 
 .status.restricted {
   color: #f59e0b;
-  font-weight: 500;
 }
 
 .status.banned {
@@ -263,6 +274,15 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* ===== 封禁提示 ===== */
+.banned-hint {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+/* ===== 配额 ===== */
 .quota-box {
   text-align: center;
   margin: 16px 0;
@@ -271,9 +291,5 @@ onMounted(() => {
 .quota-number {
   font-size: 36px;
   font-weight: bold;
-}
-
-.quota-desc {
-  color: #666;
 }
 </style>

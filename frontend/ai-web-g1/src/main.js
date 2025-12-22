@@ -10,37 +10,80 @@ import { useAuthStore } from '@/stores/auth'
 
 const app = createApp(App)
 
-// 1️⃣ Pinia 必须最先初始化
+/**
+ * =========================
+ * 1️⃣ 初始化 Pinia（必须最先）
+ * =========================
+ */
 const pinia = createPinia()
 app.use(pinia)
 
-// 2️⃣ 先拿到 authStore（此时 Pinia 已就绪）
+/**
+ * =========================
+ * 2️⃣ 获取 authStore（Pinia 已就绪）
+ * =========================
+ */
 const authStore = useAuthStore(pinia)
 
-// 3️⃣ 启动引导流程
+/**
+ * =========================
+ * 3️⃣ 启动引导流程（bootstrap）
+ * =========================
+ *
+ * 设计原则（非常重要）：
+ *
+ * - ❗ App 必须能在「被封禁态」下正常启动
+ * - ❗ main.ts 不负责裁决账号权限
+ * - ❗ main.ts 只负责：
+ *     - 尝试恢复登录态
+ *     - 失败就清 token
+ *     - 永远不阻断 mount
+ *
+ * ❌ main.ts 里禁止：
+ *   - alert
+ *   - router.replace
+ *   - 强制退出逻辑
+ */
 const bootstrap = async () => {
   /**
-   * ⭐ 核心原则：
-   * - 有 token → 必须先 fetchMe()
-   * - fetchMe 失败 → 立即清空 token
-   * - 用户态确定之后，再挂 router / mount
+   * ⭐ 若存在 token：
+   * - 尝试 fetchMe
+   * - fetchMe 失败（401 / 403 / 网络异常）
+   *   → 清 token
+   *   → 不抛异常
+   *   → 继续启动
    */
-
   if (authStore.token) {
     try {
       await authStore.fetchMe()
     } catch (err) {
-      console.warn('bootstrap: fetchMe failed, clear token', err)
+      console.warn('[bootstrap] fetchMe failed, clear token', err)
       authStore.clearToken()
     }
   }
 
-  // 4️⃣ 用户态确定后，再启用路由
+  /**
+   * =========================
+   * 4️⃣ 用户态已“稳定”，再启用 router
+   * =========================
+   *
+   * ⚠️ 顺序非常重要：
+   * - router.beforeEach 里通常依赖 authStore
+   * - 必须等 fetchMe 结束
+   */
   app.use(router)
 
-  // 5️⃣ 最后再 mount
+  /**
+   * =========================
+   * 5️⃣ 挂载应用（永远要执行）
+   * =========================
+   */
   app.mount('#app')
 }
 
-// 🚀 启动
+/**
+ * =========================
+ * 🚀 启动
+ * =========================
+ */
 bootstrap()

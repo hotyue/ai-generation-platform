@@ -3,18 +3,30 @@ import { getToken, clearToken } from './auth'
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 
+/**
+ * =========================
+ * 全局状态锁
+ * =========================
+ */
+let hasForcedLogout = false
+let isLoggingOut = false   // ⭐ 新增：退出进行中熔断
+
 const http = axios.create({
-  // ⬇️ 使用 Vite 环境变量
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 15000,
 })
 
 /**
  * =========================
- * 请求拦截：自动加 token
+ * 请求拦截
  * =========================
  */
 http.interceptors.request.use((config) => {
+  if (isLoggingOut) {
+    // ⭐ 退出中，直接中断请求
+    return Promise.reject(new axios.Cancel('Logging out'))
+  }
+
   const token = getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -24,64 +36,84 @@ http.interceptors.request.use((config) => {
 
 /**
  * =========================
- * 响应拦截（关键治理点）
+ * 响应拦截（最终稳定版）
  * =========================
  */
 http.interceptors.response.use(
-  (res) => {
-    return res.data
-  },
-  (err) => {
+  (res) => res.data,
+
+  async (err) => {
     const authStore = useAuthStore()
 
-    // ⚠️ 网络级错误（例如服务器不可达）
+    /**
+     * =========================
+     * ⭐ 第一熔断：已在退出流程中
+     * =========================
+     */
+    if (isLoggingOut || hasForcedLogout) {
+      return Promise.reject(err)
+    }
+
+    /**
+     * =========================
+     * 无 response（被中断的并发请求）
+     * =========================
+     */
     if (!err.response) {
-      console.error('Network Error:', err)
-      alert('网络异常，请稍后重试')
       return Promise.reject(err)
     }
 
     const status = err.response.status
-    const detail = err.response.data?.detail
 
     /**
      * =========================
-     * 🚨 401 / 403：账号失效统一收敛
+     * 未登录态隔离
      * =========================
-     *
-     * 场景覆盖：
-     * - token 过期
-     * - 管理员运行期封禁账号
-     * - account_status = banned
-     *
-     * 行为：
-     * - 清 token
-     * - 清 Pinia user
-     * - 跳转登录页
-     * - ❗ 只执行一次，避免多次跳转
      */
-    if (status === 401 || status === 403) {
-      if (authStore.token) {
-        console.warn('Auth invalid, force logout:', detail)
-
-        authStore.clearToken()
-        clearToken()
-
-        // 使用 replace，防止回退
-        router.replace('/login')
-      }
-
+    if (!authStore.token || router.currentRoute.value.path === '/login') {
       return Promise.reject(err)
     }
 
     /**
      * =========================
-     * 其他业务错误（422 / 400 / 500）
+     * 401 / 403：账号治理入口（只允许一个）
      * =========================
      */
-    alert(detail || '请求失败')
+    if ((status === 401 || status === 403) && !isLoggingOut) {
+      isLoggingOut = true
+
+      try {
+        await authStore.fetchMe()
+        // fetchMe 成功，说明只是普通 403
+        isLoggingOut = false
+        return Promise.reject(err)
+      } catch {
+        forceLogout(authStore)
+        return Promise.reject(err)
+      }
+    }
+
     return Promise.reject(err)
   }
 )
+
+/**
+ * =========================
+ * 强制退出（原子操作）
+ * =========================
+ */
+function forceLogout(authStore) {
+  if (hasForcedLogout) return
+
+  hasForcedLogout = true
+  isLoggingOut = true
+
+  authStore.clearToken()
+  clearToken()
+
+  if (router.currentRoute.value.path !== '/login') {
+    router.replace('/login')
+  }
+}
 
 export default http
