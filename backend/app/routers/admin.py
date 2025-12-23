@@ -6,9 +6,10 @@ from backend.app.database import get_db
 from backend.app.models.user import User
 from backend.app.models.plan import Plan
 from backend.app.schemas.plan import PlanUpdate
-from backend.app.models.quota_log import QuotaLog   # ✅ 新增
+from backend.app.models.quota_log import QuotaLog
 from backend.app.routers.auth import get_current_user
 from backend.app.utils.user_events import emit_user_quota_event
+from backend.app.ws.events import emit_account_status_event  # v1.0.11
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -16,13 +17,9 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 # =========================
 # 权限校验
 # =========================
-#def require_admin(current_user: User):
-#    if current_user.role != "admin":
-#        raise HTTPException(status_code=403, detail="管理员权限不足")
 def require_admin(current_user: User) -> None:
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="管理员权限不足")
-
 
 
 # =========================
@@ -48,19 +45,16 @@ def grant_quota(
     if req.quota <= 0:
         raise HTTPException(status_code=400, detail="充值额度必须大于 0")
 
-    user = (
-        db.query(User)
-        .filter(User.id == user_id, User.is_deleted == False)
-        .first()
-    )
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.is_deleted == False,
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    # 1️⃣ quota 增加
     user.quota += req.quota
     db.add(user)
 
-    # 2️⃣ quota 流水
     quota_log = QuotaLog(
         user_id=user.id,
         change=req.quota,
@@ -70,13 +64,12 @@ def grant_quota(
     db.add(quota_log)
 
     db.commit()
-# NOTE: User State Event (v1)
-# Do NOT move before db.commit()
-    db.refresh(user)    
+    db.refresh(user)
+
     try:
         emit_user_quota_event(
             user_id=user.id,
-            balance=user.quota
+            balance=user.quota,
         )
     except Exception:
         pass
@@ -102,27 +95,23 @@ def apply_plan(
 ):
     require_admin(current_user)
 
-    user = (
-        db.query(User)
-        .filter(User.id == user_id, User.is_deleted == False)
-        .first()
-    )
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.is_deleted == False,
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    plan = (
-        db.query(Plan)
-        .filter(Plan.id == plan_id, Plan.is_active == True)
-        .first()
-    )
+    plan = db.query(Plan).filter(
+        Plan.id == plan_id,
+        Plan.is_active == True,
+    ).first()
     if not plan:
         raise HTTPException(status_code=404, detail="套餐不存在或已停用")
 
-    # 1️⃣ quota 增加
     user.quota += plan.quota
     db.add(user)
 
-    # 2️⃣ quota 流水
     quota_log = QuotaLog(
         user_id=user.id,
         change=plan.quota,
@@ -132,13 +121,12 @@ def apply_plan(
     db.add(quota_log)
 
     db.commit()
-# NOTE: User State Event (v1)
-# Do NOT move before db.commit()
     db.refresh(user)
+
     try:
         emit_user_quota_event(
             user_id=user.id,
-            balance=user.quota
+            balance=user.quota,
         )
     except Exception:
         pass
@@ -154,23 +142,20 @@ def apply_plan(
         "quota_now": user.quota,
     }
 
+
 # =========================
-# 3️⃣ 管理员获取用户列表（G6-2）
+# 3️⃣ 管理员获取用户列表
 # =========================
 @router.get("/users")
 def list_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # 管理员权限校验（复用现有逻辑）
     require_admin(current_user)
 
-    users = (
-        db.query(User)
-        .filter(User.is_deleted == False)
-        .order_by(User.id.desc())
-        .all()
-    )
+    users = db.query(User).filter(
+        User.is_deleted == False
+    ).order_by(User.id.desc()).all()
 
     return [
         {
@@ -184,8 +169,9 @@ def list_users(
         for u in users
     ]
 
+
 # =========================
-# 3️⃣ 管理员获取套餐列表
+# 4️⃣ 管理员获取套餐列表
 # =========================
 @router.get("/plans")
 def list_plans_admin(
@@ -193,12 +179,11 @@ def list_plans_admin(
     current_user: User = Depends(get_current_user),
 ):
     require_admin(current_user)
+    return db.query(Plan).order_by(Plan.id.desc()).all()
 
-    plans = db.query(Plan).order_by(Plan.id.desc()).all()
-    return plans
 
 # =========================
-# 4️⃣ 管理员创建套餐
+# 5️⃣ 管理员创建套餐
 # =========================
 class CreatePlanRequest(BaseModel):
     name: str
@@ -228,13 +213,11 @@ def create_plan(
     db.commit()
     db.refresh(plan)
 
-    return {
-        "msg": "套餐创建成功",
-        "plan": plan,
-    }
+    return {"msg": "套餐创建成功", "plan": plan}
+
 
 # =========================
-# 4️⃣-1️⃣ 管理员修改套餐
+# 6️⃣ 管理员修改套餐
 # =========================
 @router.put("/plans/{plan_id}")
 def update_plan(
@@ -250,7 +233,6 @@ def update_plan(
         raise HTTPException(status_code=404, detail="套餐不存在")
 
     update_data = payload.dict(exclude_unset=True)
-
     if not update_data:
         raise HTTPException(status_code=400, detail="未提供任何可修改字段")
 
@@ -261,13 +243,11 @@ def update_plan(
     db.commit()
     db.refresh(plan)
 
-    return {
-        "msg": "套餐修改成功",
-        "plan": plan,
-    }
+    return {"msg": "套餐修改成功", "plan": plan}
+
 
 # =========================
-# 5️⃣ 管理员停用套餐
+# 7️⃣ 管理员停用 / 启用套餐
 # =========================
 @router.post("/plans/{plan_id}/disable")
 def disable_plan(
@@ -285,14 +265,9 @@ def disable_plan(
     db.add(plan)
     db.commit()
 
-    return {
-        "msg": "套餐已停用",
-        "plan_id": plan.id,
-    }
+    return {"msg": "套餐已停用", "plan_id": plan.id}
 
-# =========================
-# 6️⃣ 管理员启用套餐
-# =========================
+
 @router.post("/plans/{plan_id}/enable")
 def enable_plan(
     plan_id: int,
@@ -309,21 +284,24 @@ def enable_plan(
     db.add(plan)
     db.commit()
 
-    return {
-        "msg": "套餐已启用",
-        "plan_id": plan.id,
-    }
+    return {"msg": "套餐已启用", "plan_id": plan.id}
 
-# 设为受限
+
+# =========================
+# 账号状态治理（v1.0.11 · 正确版）
+# =========================
 @router.post("/users/{user_id}/restrict")
-def restrict_user(
+async def restrict_user(
     user_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_admin(current_user)
 
-    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.is_deleted == False,
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
@@ -335,22 +313,30 @@ def restrict_user(
     db.commit()
     db.refresh(user)
 
+    await emit_account_status_event(
+        user_id=user.id,
+        account_status=user.account_status,
+    )
+
     return {
         "msg": "用户已设为受限",
         "user_id": user.id,
         "account_status": user.account_status,
     }
 
-# 解除受限
+
 @router.post("/users/{user_id}/unrestrict")
-def unrestrict_user(
+async def unrestrict_user(
     user_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_admin(current_user)
 
-    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.is_deleted == False,
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
@@ -362,22 +348,30 @@ def unrestrict_user(
     db.commit()
     db.refresh(user)
 
+    await emit_account_status_event(
+        user_id=user.id,
+        account_status=user.account_status,
+    )
+
     return {
         "msg": "用户受限状态已解除",
         "user_id": user.id,
         "account_status": user.account_status,
     }
 
-# 封禁账号
+
 @router.post("/users/{user_id}/ban")
-def ban_user(
+async def ban_user(
     user_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_admin(current_user)
 
-    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.is_deleted == False,
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
@@ -386,22 +380,30 @@ def ban_user(
     db.commit()
     db.refresh(user)
 
+    await emit_account_status_event(
+        user_id=user.id,
+        account_status=user.account_status,
+    )
+
     return {
         "msg": "用户已封禁",
         "user_id": user.id,
         "account_status": user.account_status,
     }
 
-# 解除封禁
+
 @router.post("/users/{user_id}/unban")
-def unban_user(
+async def unban_user(
     user_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_admin(current_user)
 
-    user = db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.is_deleted == False,
+    ).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
@@ -412,6 +414,11 @@ def unban_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    await emit_account_status_event(
+        user_id=user.id,
+        account_status=user.account_status,
+    )
 
     return {
         "msg": "用户已解封",

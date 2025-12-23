@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.app.routers import task, generate, history, auth, admin, plan, quota
+from backend.app.ws import account_status
 from backend.app.middlewares.account_status import AccountStatusMiddleware  # v1.0.10
 
 app = FastAPI(title="AI Generation Platform Backend")
@@ -63,6 +64,7 @@ app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
 app.include_router(plan.router, prefix=API_PREFIX)
 app.include_router(quota.router, prefix=API_PREFIX)
+app.include_router(account_status.router)
 
 @app.get("/")
 def root():
