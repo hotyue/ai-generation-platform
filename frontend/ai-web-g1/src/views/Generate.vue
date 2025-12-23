@@ -271,6 +271,10 @@ onUnmounted(stopPolling)
 </script>
 
 <style scoped>
+/* =========================
+ * 页面容器
+ * ========================= */
+
 .generate-page {
   max-width: 720px;
   margin: 0 auto;
@@ -278,44 +282,91 @@ onUnmounted(stopPolling)
   display: flex;
   flex-direction: column;
   gap: 16px;
+  color: var(--text-primary);
 }
 
+/* =========================
+ * 加载提示
+ * ========================= */
+
 .loading {
-  color: #666;
+  color: var(--text-secondary);
 }
+
+/* =========================
+ * 输入框
+ * ========================= */
 
 .textarea {
   min-height: 120px;
   padding: 12px;
   font-size: 14px;
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-base);
+  border-radius: 6px;
 }
+
+.textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.textarea:disabled {
+  opacity: 0.6;
+}
+
+/* =========================
+ * 按钮
+ * ========================= */
 
 .btn {
   padding: 10px;
   font-size: 16px;
+
+  border-radius: 6px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-card);
+  color: var(--text-primary);
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
+/* =========================
+ * 状态提示
+ * ========================= */
+
 .warn {
-  color: #d97706;
+  color: var(--state-warning);
 }
 
 .error {
-  color: red;
+  color: var(--state-danger);
 }
+
+/* =========================
+ * 任务状态盒子
+ * ========================= */
 
 .task-box {
   padding: 12px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
+  border-radius: 6px;
+
+  background: var(--bg-muted);
+  border: 1px solid var(--border-base);
+  color: var(--text-primary);
 }
+
+/* =========================
+ * 图片展示
+ * ========================= */
 
 .image-box img {
   max-width: 100%;
   border-radius: 4px;
+  border: 1px solid var(--border-base);
 }
 </style>
