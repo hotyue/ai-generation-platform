@@ -130,27 +130,41 @@ onMounted(() => {
   max-width: 960px;
   margin: 0 auto;
   padding: 16px;
+  color: var(--text-primary);
 }
 
-/* 状态提示条 */
+/* =========================
+ * 状态提示条
+ * ========================= */
+
 .status-banner {
   padding: 10px 14px;
   margin-bottom: 16px;
   font-size: 14px;
   border-radius: 6px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-muted);
+  color: var(--text-primary);
 }
 
 .status-banner.restricted {
-  background: #fff7ed;
-  color: #9a3412;
+  /* 受限：警告语义 */
+  border-color: var(--state-warning);
+  color: var(--state-warning);
+  background: var(--bg-muted);
 }
 
 .status-banner.banned {
-  background: #fef2f2;
-  color: #991b1b;
+  /* 封禁：危险语义 */
+  border-color: var(--state-danger);
+  color: var(--state-danger);
+  background: var(--bg-muted);
 }
 
-/* 套餐网格 */
+/* =========================
+ * 套餐网格
+ * ========================= */
+
 .grid {
   display: grid;
   gap: 16px;
@@ -161,21 +175,34 @@ onMounted(() => {
   position: relative;
 }
 
-/* 覆盖层 */
+/* =========================
+ * 覆盖层（非 normal）
+ * ========================= */
+
 .overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.75);
+  border-radius: 8px;
+
+  background: rgba(0, 0, 0, 0.45); /* 深浅通吃 */
+  backdrop-filter: blur(1px);
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   font-size: 14px;
   font-weight: 500;
-  color: #444;
-  border-radius: 8px;
+  color: #ffffff;
+  text-align: center;
+  padding: 12px;
 }
 
+/* =========================
+ * 错误提示
+ * ========================= */
+
 .error {
-  color: red;
+  color: var(--state-danger);
 }
 </style>
