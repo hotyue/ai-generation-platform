@@ -24,13 +24,55 @@
               {{ u.is_active ? '启用' : '禁用' }}
             </span>
           </div>
+
           <div class="meta">
             账号状态：
             <strong>{{ u.account_status }}</strong>
-          </div>         
+          </div>
         </div>
 
         <div class="actions">
+          <!-- =========================
+               v1.0.15 · account_status 管理
+          ========================= -->
+
+          <!-- normal → restricted -->
+          <button
+            v-if="u.account_status === 'normal'"
+            class="btn"
+            @click="handleRestrict(u)"
+          >
+            设为受限
+          </button>
+
+          <!-- restricted → normal -->
+          <button
+            v-if="u.account_status === 'restricted'"
+            class="btn"
+            @click="handleUnrestrict(u)"
+          >
+            解除受限
+          </button>
+
+          <!-- restricted → banned -->
+          <button
+            v-if="u.account_status === 'restricted'"
+            class="btn"
+            @click="handleBan(u)"
+          >
+            封禁
+          </button>
+
+          <!-- banned → normal -->
+          <button
+            v-if="u.account_status === 'banned'"
+            class="btn"
+            @click="handleUnban(u)"
+          >
+            解封
+          </button>
+
+          <!-- 原有功能（不改动） -->
           <button class="btn primary" @click="openGrant(u)">充值</button>
           <button class="btn" @click="openPlan(u)">绑定套餐</button>
         </div>
@@ -92,7 +134,6 @@
   </div>
 </template>
 
-
 <script setup>
 import { ref, onMounted } from 'vue'
 
@@ -101,6 +142,12 @@ import {
   fetchAdminPlans,
   grantUserQuota,
   applyUserPlan,
+
+  // v1.0.15：account_status 管理接口
+  restrictUser,
+  unrestrictUser,
+  banUser,
+  unbanUser,
 } from '@/api'
 
 import { useAuthStore } from '@/stores/auth'
@@ -120,7 +167,6 @@ const fetchUsers = async () => {
   error.value = ''
   try {
     users.value = await fetchAdminUsers()
-/*    users.value = data  */
   } catch (e) {
     console.error(e)
     error.value = '获取用户列表失败'
@@ -130,12 +176,34 @@ const fetchUsers = async () => {
 }
 
 /* =========================
+   v1.0.15 · account_status 管理
+========================= */
+const handleRestrict = async (u) => {
+  await restrictUser(u.id)
+  fetchUsers()
+}
+
+const handleUnrestrict = async (u) => {
+  await unrestrictUser(u.id)
+  fetchUsers()
+}
+
+const handleBan = async (u) => {
+  await banUser(u.id)
+  fetchUsers()
+}
+
+const handleUnban = async (u) => {
+  await unbanUser(u.id)
+  fetchUsers()
+}
+
+/* =========================
    获取套餐列表
 ========================= */
 const fetchPlans = async () => {
   try {
     plans.value = await fetchAdminPlans()
-/*    plans.value = data  */
   } catch (e) {
     console.error('获取套餐失败', e)
   }
