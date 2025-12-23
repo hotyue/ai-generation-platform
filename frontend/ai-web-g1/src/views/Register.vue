@@ -74,8 +74,12 @@ const handleRegister = async () => {
 
     alert('注册成功，请登录')
     router.push('/login')
-  } catch {
-    // ❗错误提示已在 http.js 中统一处理
+  } catch (err: any) {
+    // v1.0.13：显式展示后端返回的注册错误信息
+    const msg =
+      err?.response?.data?.detail || '注册失败，请重试'
+    alert(msg)
+    throw err
   } finally {
     loading.value = false
   }
