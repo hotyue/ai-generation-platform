@@ -272,17 +272,21 @@ watch(
   gap: 20px;
 }
 
+/* ===== 卡片 ===== */
 .card {
-  background: #ffffff;
-  border: 1px solid #eee;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
   border-radius: 8px;
   padding: 16px;
+  color: var(--text-primary);
 }
 
 .card h2 {
   margin-bottom: 12px;
+  color: var(--text-primary);
 }
 
+/* ===== 行 ===== */
 .row {
   display: flex;
   justify-content: space-between;
@@ -290,28 +294,28 @@ watch(
 }
 
 .label {
-  color: #666;
+  color: var(--text-secondary);
 }
 
-/* ===== 账户状态 ===== */
+/* ===== 账户状态（语义色，允许写死） ===== */
 .status.normal {
-  color: #16a34a;
+  color: var(--state-success);
 }
 
 .status.restricted {
-  color: #f59e0b;
+  color: var(--state-warning);
 }
 
 .status.banned {
-  color: #dc2626;
+  color: var(--state-danger);
   font-weight: 600;
 }
 
 /* ===== 封禁提示 ===== */
 .banned-hint {
-  border: 1px solid #fecaca;
-  background: #fff1f2;
-  color: #b91c1c;
+  border: 1px solid var(--border-base);
+  background: var(--bg-muted);
+  color: var(--text-primary);
   font-weight: 500;
 }
 
@@ -324,5 +328,10 @@ watch(
 .quota-number {
   font-size: 36px;
   font-weight: bold;
+  color: var(--text-primary);
+}
+
+.hint {
+  color: var(--text-secondary);
 }
 </style>
