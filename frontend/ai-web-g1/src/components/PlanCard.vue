@@ -27,10 +27,13 @@ defineProps({
 
 <style scoped>
 .plan-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-base);
   border-radius: 8px;
   padding: 16px;
-  background: #fff;
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -43,25 +46,30 @@ defineProps({
 .name {
   font-size: 18px;
   font-weight: bold;
+  color: var(--text-primary);
 }
 
 .quota {
   font-size: 14px;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .price {
   font-size: 22px;
   font-weight: bold;
-  color: #2563eb;
+  color: var(--state-success);
 }
 
 .btn {
   margin-top: auto;
   padding: 8px;
-  background: #9ca3af;
-  color: #fff;
-  border: none;
+
+  background: var(--bg-muted);
+  color: var(--text-primary);
+
+  border: 1px solid var(--border-base);
   border-radius: 4px;
+
+  cursor: not-allowed;
 }
 </style>
