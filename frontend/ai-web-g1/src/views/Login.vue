@@ -135,6 +135,10 @@ const goRegister = () => {
 </script>
 
 <style scoped>
+/* =========================
+ * 页面容器
+ * ========================= */
+
 .login-page {
   height: 100vh;
   display: flex;
@@ -142,42 +146,84 @@ const goRegister = () => {
   justify-content: center;
   align-items: center;
   gap: 12px;
+
+  color: var(--text-primary);
 }
+
+/* =========================
+ * 输入框
+ * ========================= */
 
 .input {
   width: 240px;
   padding: 8px;
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
 }
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+/* =========================
+ * 按钮行
+ * ========================= */
 
 .btn-row {
   display: flex;
   gap: 12px;
 }
 
+/* =========================
+ * 按钮（通用）
+ * ========================= */
+
 .btn {
   width: 114px;
   padding: 8px;
+
+  border-radius: 6px;
+  border: 1px solid var(--border-base);
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+
   cursor: pointer;
 }
 
-.btn-primary {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-}
-
-.btn-secondary {
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-}
-
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
+/* =========================
+ * 主 / 次按钮语义
+ * ========================= */
+
+.btn-primary {
+  border-color: var(--state-success);
+  color: var(--state-success);
+}
+
+.btn-secondary {
+  border-color: var(--border-base);
+  color: var(--text-secondary);
+}
+
+/* =========================
+ * 错误提示
+ * ========================= */
+
 .error {
-  color: red;
+  color: var(--state-danger);
   margin-top: 8px;
 }
 </style>
