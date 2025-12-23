@@ -4,12 +4,26 @@ import router from './router'
 
 import App from './App.vue'
 import './style.css'
+import './assets/styles/theme.css' // ⭐ v1.0.14：全局主题语义层入口
 
 // ⭐ Auth Store
 import { useAuthStore } from '@/stores/auth'
 
 // ⭐ Account Status WS
 import { startAccountStatusWS } from '@/utils/ws'
+
+/**
+ * =========================
+ * ⭐ v1.0.14：主题语义锚点
+ * =========================
+ *
+ * 说明（执行级事实）：
+ * - 非主题切换
+ * - 非业务逻辑
+ * - 仅用于建立全站统一主题语义入口
+ * - 为 v1.1 / v2.x 扩展保留稳定锚点
+ */
+document.documentElement.setAttribute('data-theme', 'system')
 
 const app = createApp(App)
 
@@ -33,7 +47,7 @@ const authStore = useAuthStore(pinia)
  * 3️⃣ 启动引导流程（bootstrap）
  * =========================
  *
- * 设计原则（非常重要）：
+ * 设计原则（保持不变）：
  *
  * - ❗ App 必须能在「被封禁态」下正常启动
  * - ❗ main.js 不负责裁决账号权限
@@ -70,7 +84,7 @@ const bootstrap = async () => {
    * ⭐ v1.0.11：启动账号状态 WS
    * =========================
    *
-   * 设计裁决：
+   * 设计裁决（保持不变）：
    * - 只在“用户态已稳定”后启动
    * - 不关心 account_status
    * - WS 失败不影响启动
