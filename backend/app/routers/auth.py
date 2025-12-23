@@ -82,7 +82,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         email=user_in.email,
         phone=user_in.phone,
         role="user",
-        quota=0,
+        quota=3,
         is_active=True,
         is_deleted=False,
     )
