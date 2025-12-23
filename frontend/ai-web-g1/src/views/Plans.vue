@@ -3,7 +3,7 @@
     <h1>套餐中心</h1>
 
     <!-- =========================
-         账号状态提示
+         账号状态提示（WS 实时）
     ========================= -->
     <div
       v-if="accountStatus !== 'normal'"
@@ -57,29 +57,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useAccountStatusStore } from '@/stores/accountStatus'
 import { fetchPlans } from '@/api'
 import PlanCard from '@/components/PlanCard.vue'
 
-const router = useRouter()
-const authStore = useAuthStore()
-
 /**
- * account_status（唯一来源）
+ * =========================
+ * account_status（WS 唯一事实源）
+ * =========================
  */
-const accountStatus = computed(() => authStore.accountStatus)
+const accountStatusStore = useAccountStatusStore()
+
+const accountStatus = computed(() => {
+  return accountStatusStore.status
+})
 
 /**
+ * =========================
  * 页面状态
+ * =========================
  */
 const plans = ref([])
 const loading = ref(false)
 const error = ref('')
 
 /**
- * 拉取套餐
+ * =========================
+ * 拉取套餐（任何状态都允许）
+ * =========================
  */
 const loadPlans = async () => {
   loading.value = true
@@ -95,24 +101,26 @@ const loadPlans = async () => {
 }
 
 /**
- * 初始化
+ * =========================
+ * account_status 变化联动（v1.0.11）
+ * =========================
+ *
+ * - banned / restricted：只更新 UI
+ * - normal：不自动重新 fetch（套餐静态）
  */
-onMounted(async () => {
-  if (!authStore.user) {
-    try {
-      await authStore.fetchMe()
-    } catch {
-      router.replace('/login')
-      return
-    }
+watch(
+  () => accountStatus.value,
+  () => {
+    // 这里只做 UI 响应，不做跳转、不 fetch
   }
+)
 
-  // banned 用户不允许进入
-  if (accountStatus.value === 'banned') {
-    router.replace('/login')
-    return
-  }
-
+/**
+ * =========================
+ * 初始化
+ * =========================
+ */
+onMounted(() => {
   loadPlans()
 })
 </script>

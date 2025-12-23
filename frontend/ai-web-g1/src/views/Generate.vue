@@ -81,16 +81,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useAccountStatusStore } from '@/stores/accountStatus'
 import { createGenerateTask, fetchHistory } from '@/api'
 
 /**
  * =========================
- * Store（唯一来源）
+ * Store
  * =========================
  */
 const authStore = useAuthStore()
+const accountStatusStore = useAccountStatusStore()
 
 /**
  * =========================
@@ -101,8 +103,17 @@ const userLoading = computed(() => {
   return authStore.token && !authStore.user
 })
 
+/**
+ * =========================
+ * account_status（v1.0.11 修正版）
+ * - WS 为唯一事实源（accountStatusStore）
+ * - 首次进入/极短时间 WS 未就绪：回退到 /me 的 accountStatus
+ * =========================
+ */
 const accountStatus = computed(() => {
-  return authStore.user?.account_status ?? 'normal'
+  return accountStatusStore.status !== 'unknown'
+    ? accountStatusStore.status
+    : (authStore.user?.account_status ?? 'normal')
 })
 
 /**
@@ -156,6 +167,27 @@ const statusText = computed(() => {
 
 /**
  * =========================
+ * v1.0.11 行为修正：
+ * - 一旦账号不再 normal
+ *   - 立即停止轮询
+ *   - 清理“生成中”态，避免页面持续卡在 pending
+ * =========================
+ */
+watch(
+  () => accountStatus.value,
+  (val) => {
+    if (val !== 'normal') {
+      stopPolling()
+      // 如果正在 pending，改为中止态（不引入新语义，只清掉 pending）
+      if (status.value === 'pending') {
+        status.value = ''
+      }
+    }
+  }
+)
+
+/**
+ * =========================
  * 提交生成任务
  * =========================
  */
@@ -198,6 +230,12 @@ const startPolling = () => {
   stopPolling()
 
   timer = setInterval(async () => {
+    // 账号非 normal 时，不再轮询（避免无意义请求与 UI 僵态）
+    if (accountStatus.value !== 'normal') {
+      stopPolling()
+      return
+    }
+
     try {
       const list = await fetchHistory()
       const record = list.find(

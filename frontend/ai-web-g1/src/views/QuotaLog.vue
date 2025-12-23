@@ -3,7 +3,7 @@
     <h1>额度变动记录</h1>
 
     <!-- =========================
-         账号状态提示
+         账号状态提示（WS 实时）
     ========================= -->
     <div
       v-if="accountStatus !== 'normal'"
@@ -77,20 +77,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useAccountStatusStore } from '@/stores/accountStatus'
 import { fetchQuotaLogs } from '@/api'
-
-const router = useRouter()
-const authStore = useAuthStore()
 
 /**
  * =========================
- * account_status（唯一事实源）
+ * account_status（WS 唯一事实源）
  * =========================
  */
-const accountStatus = computed(() => authStore.accountStatus)
+const accountStatusStore = useAccountStatusStore()
+
+const accountStatus = computed(() => {
+  return accountStatusStore.status
+})
 
 /**
  * =========================
@@ -166,26 +166,26 @@ const nextPage = () => {
 
 /**
  * =========================
+ * account_status 变化联动（v1.0.11）
+ * =========================
+ *
+ * - 仅驱动 UI
+ * - 不 fetch
+ * - 不跳转
+ */
+watch(
+  () => accountStatus.value,
+  () => {
+    // UI 自动响应即可
+  }
+)
+
+/**
+ * =========================
  * 初始化
  * =========================
  */
-onMounted(async () => {
-  // 确保 user 已加载
-  if (!authStore.user) {
-    try {
-      await authStore.fetchMe()
-    } catch {
-      router.replace('/login')
-      return
-    }
-  }
-
-  // 🚫 banned 用户：不允许进入
-  if (accountStatus.value === 'banned') {
-    router.replace('/login')
-    return
-  }
-
+onMounted(() => {
   fetchLogs()
 })
 </script>

@@ -3,7 +3,7 @@
     <h1>生成历史</h1>
 
     <!-- =========================
-         账号状态提示
+         账号状态提示（WS 实时）
     ========================= -->
     <div
       v-if="accountStatus !== 'normal'"
@@ -65,13 +65,13 @@
     <div class="pager">
       <button
         @click="prevPage"
-        :disabled="offset === 0"
+        :disabled="offset === 0 || accountStatus !== 'normal'"
       >
         上一页
       </button>
       <button
         @click="nextPage"
-        :disabled="list.length < limit"
+        :disabled="list.length < limit || accountStatus !== 'normal'"
       >
         下一页
       </button>
@@ -91,20 +91,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useAccountStatusStore } from '@/stores/accountStatus'
 import { fetchHistory } from '@/api'
-
-const router = useRouter()
-const authStore = useAuthStore()
 
 /**
  * =========================
- * account_status（唯一事实源）
+ * account_status（WS 唯一事实源）
  * =========================
  */
-const accountStatus = computed(() => authStore.accountStatus)
+const accountStatusStore = useAccountStatusStore()
+
+const accountStatus = computed(() => {
+  return accountStatusStore.status
+})
 
 /**
  * =========================
@@ -127,6 +127,9 @@ let timer = null
  * =========================
  */
 const loadHistory = async () => {
+  // ⭐ 唯一禁止条件：banned
+  if (accountStatus.value === 'banned') return
+
   loading.value = true
   error.value = ''
 
@@ -138,13 +141,12 @@ const loadHistory = async () => {
 
     list.value = data
 
-    // 仅在存在 pending 时轮询
     const hasPending = data.some(
       (item) => item.status === 'pending'
     )
 
     hasPending ? startPolling() : stopPolling()
-  } catch (e) {
+  } catch {
     error.value = '获取历史失败'
   } finally {
     loading.value = false
@@ -153,7 +155,7 @@ const loadHistory = async () => {
 
 /**
  * =========================
- * 轮询
+ * 轮询（仅基于任务状态）
  * =========================
  */
 const startPolling = () => {
@@ -167,6 +169,25 @@ const stopPolling = () => {
     timer = null
   }
 }
+
+/**
+ * =========================
+ * account_status 变化联动
+ * =========================
+ */
+watch(
+  () => accountStatus.value,
+  (val) => {
+    if (val === 'banned') {
+      stopPolling()
+      list.value = []
+      return
+    }
+
+    // normal / restricted / unknown
+    loadHistory()
+  }
+)
 
 /**
  * =========================
@@ -209,23 +230,7 @@ const formatTime = (t) => {
  * 初始化
  * =========================
  */
-onMounted(async () => {
-  // 确保 user 已加载
-  if (!authStore.user) {
-    try {
-      await authStore.fetchMe()
-    } catch {
-      router.replace('/login')
-      return
-    }
-  }
-
-  // 🚫 banned 用户：不允许进入
-  if (accountStatus.value === 'banned') {
-    router.replace('/login')
-    return
-  }
-
+onMounted(() => {
   loadHistory()
 })
 
@@ -234,14 +239,15 @@ onUnmounted(() => {
 })
 </script>
 
+
 <style scoped>
+/* 样式保持不变 */
 .history-page {
   max-width: 900px;
   margin: 0 auto;
   padding: 16px;
 }
 
-/* 状态提示条 */
 .status-banner {
   padding: 10px 14px;
   margin-bottom: 12px;

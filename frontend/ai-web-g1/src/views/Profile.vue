@@ -32,7 +32,7 @@
     </section>
 
     <!-- =========================
-         封禁提示（强提示）
+         封禁提示（展示级）
     ========================= -->
     <section
       v-if="accountStatus === 'banned'"
@@ -146,29 +146,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { getMe, fetchPlans, fetchQuotaLogs } from '@/api'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useAccountStatusStore } from '@/stores/accountStatus'
+import { fetchPlans, fetchQuotaLogs } from '@/api'
 
 const authStore = useAuthStore()
+const accountStatusStore = useAccountStatusStore()
 
-const me = ref(null)
-const plans = ref([])
-const quotaLogs = ref([])
+/**
+ * =========================
+ * 用户信息（来自 authStore）
+ * =========================
+ */
+const me = computed(() => authStore.user)
 
-/* =========================
-   当前用户
-========================= */
-const fetchMe = async () => {
-  me.value = await getMe()
-  authStore.setUser(me.value)
-}
-
-/* =========================
-   账户状态
-========================= */
+/**
+ * =========================
+ * account_status（WS 唯一事实源）
+ * =========================
+ */
 const accountStatus = computed(() => {
-  return me.value?.account_status || 'normal'
+  return accountStatusStore.status
 })
 
 const accountStatusText = computed(() => {
@@ -182,25 +181,35 @@ const accountStatusText = computed(() => {
   }
 })
 
-/* =========================
-   套餐（仅允许时加载）
-========================= */
+/**
+ * =========================
+ * 页面数据
+ * =========================
+ */
+const plans = ref([])
+const quotaLogs = ref([])
+
+/**
+ * =========================
+ * 数据加载（展示级）
+ * =========================
+ */
 const loadPlans = async () => {
-  if (accountStatus.value === 'banned') return
   plans.value = await fetchPlans()
 }
 
-/* =========================
-   最近额度记录（仅允许时加载）
-========================= */
 const loadQuotaLogs = async () => {
-  if (accountStatus.value === 'banned') return
   quotaLogs.value = await fetchQuotaLogs({
     limit: 5,
     offset: 0,
   })
 }
 
+/**
+ * =========================
+ * 工具函数
+ * =========================
+ */
 const reasonText = (reason) => {
   if (!reason) return '未知变动'
   if (reason === 'manual_grant') return '管理员充值'
@@ -216,10 +225,13 @@ const formatTime = (t) => {
   return new Date(t).toLocaleString()
 }
 
+/**
+ * =========================
+ * 初始化
+ * =========================
+ */
 onMounted(async () => {
-  await fetchMe()
-
-  // ⭐ 根据 account_status 决定是否继续请求
+  // 页面展示级初始化
   if (accountStatus.value !== 'banned') {
     await Promise.all([
       loadPlans(),
@@ -227,6 +239,27 @@ onMounted(async () => {
     ])
   }
 })
+
+/**
+ * =========================
+ * account_status 实时联动（v1.0.11 核心）
+ * =========================
+ */
+watch(
+  () => accountStatus.value,
+  async (status) => {
+    if (status === 'banned') {
+      plans.value = []
+      quotaLogs.value = []
+      return
+    }
+
+    await Promise.all([
+      loadPlans(),
+      loadQuotaLogs(),
+    ])
+  }
+)
 </script>
 
 <style scoped>
