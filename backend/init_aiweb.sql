@@ -1,16 +1,17 @@
 -- =====================================================
--- aiweb database initialization script (FINAL)
+-- aiweb database initialization script (v1.0.10 FINAL)
 -- =====================================================
 -- PURPOSE:
---   Cold-start / disaster recovery initialization
+--   Cold-start / new customer / disaster recovery init
 --
 -- GUARANTEES:
---   1. All tables & sequences OWNED BY aiweb_user
---   2. aiweb_user has full runtime permissions
---   3. Compatible with FastAPI + SQLAlchemy runtime
+--   1. Schema matches CURRENT production database facts
+--   2. All tables & sequences OWNED BY aiweb_user
+--   3. aiweb_user has full runtime permissions
+--   4. Compatible with FastAPI + SQLAlchemy runtime
 --
 -- WARNING:
---   This script DROPS NOTHING and ASSUMES EMPTY ENV.
+--   This script ASSUMES EMPTY ENV and DROPS NOTHING
 -- =====================================================
 
 
@@ -37,11 +38,10 @@ ALTER SCHEMA public OWNER TO aiweb_user;
 
 
 --------------------------------------------------------
--- 3. Create tables (objects MAY be owned by postgres)
---    Ownership will be FIXED explicitly later
+-- 3. Create tables (FACT-ALIGNED STRUCTURE)
 --------------------------------------------------------
 
--- users
+-- users (17 columns, aligned with production)
 CREATE TABLE users (
     id                SERIAL PRIMARY KEY,
     username          VARCHAR NOT NULL,
@@ -49,16 +49,21 @@ CREATE TABLE users (
     email             VARCHAR,
     phone             VARCHAR,
     role              VARCHAR,
+
     quota             BIGINT,
     is_active         BOOLEAN,
     is_deleted        BOOLEAN,
+
     avatar_url        VARCHAR,
     remark            VARCHAR,
     inviter_id        INTEGER,
     invitation_code   VARCHAR,
+
     created_at        TIMESTAMP WITHOUT TIME ZONE,
     updated_at        TIMESTAMP WITHOUT TIME ZONE,
-    last_login_at     TIMESTAMP WITHOUT TIME ZONE
+    last_login_at     TIMESTAMP WITHOUT TIME ZONE,
+
+    account_status    VARCHAR
 );
 
 -- plans
@@ -68,7 +73,7 @@ CREATE TABLE plans (
     description     VARCHAR,
     quota           INTEGER NOT NULL,
     duration_days   INTEGER,
-    price           INTEGER DEFAULT 0,
+    price           NUMERIC DEFAULT 0,
     is_active       BOOLEAN DEFAULT true,
     created_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
 );
@@ -99,7 +104,7 @@ CREATE TABLE quota_logs (
 
 
 --------------------------------------------------------
--- 4. Indexes (aligned with legacy v1.0.0-beta)
+-- 4. Indexes (FACT-ALIGNED)
 --------------------------------------------------------
 
 -- users
@@ -107,7 +112,9 @@ CREATE UNIQUE INDEX ix_users_username ON users (username);
 CREATE UNIQUE INDEX ix_users_email ON users (email);
 CREATE UNIQUE INDEX ix_users_phone ON users (phone);
 CREATE UNIQUE INDEX users_invitation_code_key ON users (invitation_code);
+
 CREATE INDEX ix_users_id ON users (id);
+CREATE INDEX idx_users_account_status ON users (account_status);
 
 -- histories
 CREATE INDEX ix_histories_id ON histories (id);
@@ -119,7 +126,7 @@ CREATE INDEX idx_quota_logs_created_at ON quota_logs (created_at);
 
 
 --------------------------------------------------------
--- 5. CRITICAL: Fix ownership (THIS IS THE KEY FIX)
+-- 5. Fix ownership (CRITICAL)
 --------------------------------------------------------
 
 ALTER TABLE users OWNER TO aiweb_user;
@@ -134,7 +141,7 @@ ALTER SEQUENCE quota_logs_id_seq OWNER TO aiweb_user;
 
 
 --------------------------------------------------------
--- 6. Initialize admin user
+-- 6. Initialize admin user (OPTIONAL, FACT-COMPATIBLE)
 --------------------------------------------------------
 -- IMPORTANT:
 -- Replace password_hash with a REAL argon2 hash
@@ -148,15 +155,17 @@ INSERT INTO users (
     quota,
     is_active,
     is_deleted,
+    account_status,
     created_at
 ) VALUES (
     'admin',
-    '$argon2id$v=19$m=65536,t=3,p=4$da4VwlirVUpJybmXcs4Z4w$gzhTghlaZ7BiJ6J+o4hZ0UpH8VDIyCtnE6ZYUny/n1Q',
+    '$argon2id$v=19$m=65536,t=3,p=4$REPLACE_WITH_REAL_HASH',
     'admin@example.com',
     'admin',
     99,
     true,
     false,
+    'normal',
     now()
 );
 
@@ -165,8 +174,8 @@ INSERT INTO users (
 -- 7. Final sanity check (manual)
 --------------------------------------------------------
 -- \dt
--- SELECT id, username, role FROM users;
--- \d histories
+-- SELECT id, username, role, account_status FROM users;
+-- \d users
 --------------------------------------------------------
 
 -- END OF FILE
