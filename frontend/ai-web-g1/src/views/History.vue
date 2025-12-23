@@ -241,61 +241,99 @@ onUnmounted(() => {
 
 
 <style scoped>
-/* 样式保持不变 */
+/* =========================
+ * 页面容器
+ * ========================= */
+
 .history-page {
   max-width: 900px;
   margin: 0 auto;
   padding: 16px;
+  color: var(--text-primary);
 }
+
+/* =========================
+ * 状态提示条
+ * ========================= */
 
 .status-banner {
   padding: 10px 14px;
   margin-bottom: 12px;
   font-size: 13px;
   border-radius: 6px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-muted);
+  color: var(--text-primary);
 }
 
 .status-banner.restricted {
-  background: #fff7ed;
-  color: #9a3412;
+  border-color: var(--state-warning);
+  color: var(--state-warning);
 }
 
 .status-banner.banned {
-  background: #fef2f2;
-  color: #991b1b;
+  border-color: var(--state-danger);
+  color: var(--state-danger);
 }
+
+/* =========================
+ * 历史卡片
+ * ========================= */
 
 .card {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   padding: 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-base);
 }
+
+/* =========================
+ * 信息区
+ * ========================= */
 
 .prompt {
   font-weight: bold;
   margin-bottom: 6px;
+  color: var(--text-primary);
 }
 
 .meta {
   font-size: 12px;
-  color: #666;
   display: flex;
   gap: 12px;
+  color: var(--text-secondary);
 }
 
+/* =========================
+ * 状态文本（语义色）
+ * ========================= */
+
 .status.pending {
-  color: #f59e0b;
+  color: var(--state-warning);
 }
 
 .status.success {
-  color: #16a34a;
+  color: var(--state-success);
 }
 
 .status.failed {
-  color: #dc2626;
+  color: var(--state-danger);
 }
+
+.pending {
+  font-size: 12px;
+  color: var(--state-warning);
+}
+
+.failed {
+  font-size: 12px;
+  color: var(--state-danger);
+}
+
+/* =========================
+ * 缩略图
+ * ========================= */
 
 .thumb img {
   width: 120px;
@@ -303,15 +341,9 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-.pending {
-  font-size: 12px;
-  color: #f59e0b;
-}
-
-.failed {
-  font-size: 12px;
-  color: #dc2626;
-}
+/* =========================
+ * 分页
+ * ========================= */
 
 .pager {
   display: flex;
@@ -320,17 +352,38 @@ onUnmounted(() => {
   margin: 16px 0;
 }
 
-.error {
-  color: red;
+.pager button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-card);
+  color: var(--text-primary);
 }
+
+.pager button:disabled {
+  opacity: 0.5;
+}
+
+/* =========================
+ * 错误
+ * ========================= */
+
+.error {
+  color: var(--state-danger);
+}
+
+/* =========================
+ * 大图预览
+ * ========================= */
 
 .preview {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 999;
 }
 
 .preview img {
