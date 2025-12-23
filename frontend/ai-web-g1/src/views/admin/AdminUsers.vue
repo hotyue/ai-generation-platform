@@ -24,6 +24,10 @@
               {{ u.is_active ? '启用' : '禁用' }}
             </span>
           </div>
+          <div class="meta">
+            账号状态：
+            <strong>{{ u.account_status }}</strong>
+          </div>         
         </div>
 
         <div class="actions">
