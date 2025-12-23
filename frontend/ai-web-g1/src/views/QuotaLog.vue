@@ -195,32 +195,45 @@ onMounted(() => {
   max-width: 720px;
   margin: 0 auto;
   padding: 16px;
+  color: var(--text-primary);
 }
 
-/* 状态提示条 */
+/* =========================
+ * 状态提示条
+ * ========================= */
+
 .status-banner {
   padding: 10px 14px;
   margin-bottom: 12px;
   font-size: 13px;
   border-radius: 6px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-muted);
+  color: var(--text-primary);
 }
 
 .status-banner.restricted {
-  background: #fff7ed;
-  color: #9a3412;
+  border-color: var(--state-warning);
+  color: var(--state-warning);
+  background: var(--bg-muted);
 }
 
 .status-banner.banned {
-  background: #fef2f2;
-  color: #991b1b;
+  border-color: var(--state-danger);
+  color: var(--state-danger);
+  background: var(--bg-muted);
 }
+
+/* =========================
+ * 列表行
+ * ========================= */
 
 .row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-base);
 }
 
 .left {
@@ -229,28 +242,36 @@ onMounted(() => {
   gap: 4px;
 }
 
+/* =========================
+ * 额度变动
+ * ========================= */
+
 .change {
   font-size: 18px;
   font-weight: bold;
 }
 
 .change.plus {
-  color: #16a34a;
+  color: var(--state-success);
 }
 
 .change.minus {
-  color: #dc2626;
+  color: var(--state-danger);
 }
 
 .reason {
   font-size: 14px;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .time {
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
 }
+
+/* =========================
+ * 分页
+ * ========================= */
 
 .pager {
   display: flex;
@@ -259,13 +280,29 @@ onMounted(() => {
   margin-top: 16px;
 }
 
+.pager button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.pager button:disabled {
+  opacity: 0.5;
+}
+
+/* =========================
+ * 错误 / 空态
+ * ========================= */
+
 .error {
-  color: red;
+  color: var(--state-danger);
 }
 
 .empty {
   text-align: center;
-  color: #888;
+  color: var(--text-muted);
   margin-top: 24px;
 }
 </style>
