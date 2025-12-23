@@ -164,6 +164,7 @@ def list_users(
             "role": u.role,
             "quota": u.quota,
             "is_active": u.is_active,
+            "account_status": u.account_status,  # ⭐ v1.0.15 关键补齐
             "created_at": u.created_at,
         }
         for u in users
