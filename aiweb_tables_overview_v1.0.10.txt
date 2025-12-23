@@ -1,0 +1,9 @@
+                                      List of relations
+ Schema |    Name    | Type  |   Owner    | Persistence | Access method | Size  | Description 
+--------+------------+-------+------------+-------------+---------------+-------+-------------
+ public | histories  | table | aiweb_user | permanent   | heap          | 16 kB | 
+ public | plans      | table | aiweb_user | permanent   | heap          | 16 kB | 
+ public | quota_logs | table | aiweb_user | permanent   | heap          | 16 kB | 
+ public | users      | table | aiweb_user | permanent   | heap          | 48 kB | 
+(4 rows)
+
