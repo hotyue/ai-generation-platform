@@ -226,20 +226,46 @@ onMounted(fetchPlans)
 </script>
 
 <style scoped>
+/* =========================
+ * 页面容器
+ * ========================= */
+
 .admin-plans {
   max-width: 900px;
   margin: 0 auto;
   padding: 16px;
+  color: var(--text-primary);
 }
 
 .title {
   font-size: 28px;
   margin-bottom: 16px;
+  color: var(--text-primary);
 }
+
+/* =========================
+ * 工具栏
+ * ========================= */
 
 .toolbar {
   margin-bottom: 16px;
 }
+
+/* =========================
+ * 提示 / 错误
+ * ========================= */
+
+.hint {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--state-danger);
+}
+
+/* =========================
+ * 套餐列表
+ * ========================= */
 
 .plan-list {
   display: flex;
@@ -248,28 +274,49 @@ onMounted(fetchPlans)
 }
 
 .plan-card {
-  background: #fff;
-  border: 1px solid #eee;
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
   border-radius: 8px;
   padding: 14px;
+
   display: flex;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
 
+/* =========================
+ * 套餐信息
+ * ========================= */
+
 .plan-name {
   font-size: 16px;
   font-weight: bold;
+  color: var(--text-primary);
 }
 
 .plan-meta {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   display: flex;
   gap: 12px;
   margin-top: 4px;
 }
+
+/* 停用标记 */
+.badge.inactive {
+  background: var(--bg-muted);
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  border: 1px solid var(--border-base);
+}
+
+/* =========================
+ * 操作区
+ * ========================= */
 
 .plan-actions {
   display: flex;
@@ -277,69 +324,88 @@ onMounted(fetchPlans)
   gap: 8px;
 }
 
-.badge.inactive {
-  background: #ddd;
-  color: #333;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-}
+/* =========================
+ * 按钮（统一语义）
+ * ========================= */
 
 .btn {
   padding: 6px 12px;
-  border: none;
   border-radius: 4px;
   cursor: pointer;
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-base);
 }
 
 .btn.primary {
-  background: #2563eb;
-  color: #fff;
+  border-color: var(--state-success);
+  color: var(--state-success);
 }
 
 .btn.success {
-  background: #16a34a;
-  color: #fff;
+  border-color: var(--state-success);
+  color: var(--state-success);
 }
 
 .btn.danger {
-  background: #ef4444;
-  color: #fff;
+  border-color: var(--state-danger);
+  color: var(--state-danger);
 }
 
-.hint {
-  color: #666;
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.error {
-  color: red;
-}
+/* =========================
+ * Modal 遮罩
+ * ========================= */
 
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 999;
 }
 
+/* =========================
+ * Modal 内容
+ * ========================= */
+
 .modal {
-  background: #fff;
+  background: var(--bg-card);
+  color: var(--text-primary);
+
   padding: 20px;
   width: 90%;
   max-width: 360px;
   border-radius: 8px;
+
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  border: 1px solid var(--border-base);
 }
 
+/* 输入框 */
 .modal input {
   padding: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
 }
 
+.modal input::placeholder {
+  color: var(--text-muted);
+}
+
+/* 操作区 */
 .modal-actions {
   display: flex;
   justify-content: flex-end;

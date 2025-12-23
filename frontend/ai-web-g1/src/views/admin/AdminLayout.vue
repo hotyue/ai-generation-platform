@@ -26,36 +26,66 @@ const goBack = () => {
 </script>
 
 <style scoped>
+/* =========================
+ * 后台整体布局
+ * ========================= */
+
 .admin-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--bg-base);
+  color: var(--text-primary);
 }
+
+/* =========================
+ * 顶部 Header
+ * ========================= */
 
 .admin-header {
   height: 56px;
-  background: #111827;
-  color: #fff;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 16px;
+
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-base);
+  color: var(--text-primary);
 }
 
 .title {
   font-weight: bold;
 }
 
+/* =========================
+ * 返回按钮
+ * ========================= */
+
 .exit {
-  background: #374151;
-  color: #fff;
-  border: none;
   padding: 6px 10px;
   cursor: pointer;
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
 }
+
+.exit:hover {
+  opacity: 0.85;
+}
+
+/* =========================
+ * 内容区
+ * ========================= */
 
 .admin-content {
   flex: 1;
-  background: #f9fafb;
+  padding: 16px;
+
+  background: var(--bg-base);
+  color: var(--text-primary);
 }
 </style>

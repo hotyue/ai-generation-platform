@@ -215,26 +215,40 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* =========================
+ * 页面容器
+ * ========================= */
+
 .admin-users {
   max-width: 900px;
   margin: 0 auto;
   padding: 16px;
+  color: var(--text-primary);
 }
 
 .title {
   font-size: 32px;
   margin-bottom: 16px;
+  color: var(--text-primary);
 }
+
+/* =========================
+ * 提示 / 错误
+ * ========================= */
 
 .hint {
   text-align: center;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .error {
-  color: red;
+  color: var(--state-danger);
   text-align: center;
 }
+
+/* =========================
+ * 用户列表
+ * ========================= */
 
 .user-list {
   display: flex;
@@ -243,13 +257,20 @@ onMounted(() => {
 }
 
 .user-card {
-  border: 1px solid #eee;
+  border: 1px solid var(--border-base);
   border-radius: 8px;
   padding: 12px;
+
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  background: var(--bg-card);
 }
+
+/* =========================
+ * 用户信息
+ * ========================= */
 
 .user-main {
   display: flex;
@@ -260,24 +281,44 @@ onMounted(() => {
 .user-name {
   font-weight: bold;
   font-size: 18px;
+  color: var(--text-primary);
 }
 
-.tag.admin {
-  background: #111827;
-  color: #fff;
+/* Admin 标记 */
+.badge.admin {
+  background: var(--bg-muted);
+  color: var(--text-primary);
   font-size: 12px;
   padding: 2px 6px;
   margin-left: 6px;
   border-radius: 4px;
+  border: 1px solid var(--border-base);
 }
 
 .user-meta {
   font-size: 14px;
-  color: #555;
+  color: var(--text-secondary);
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
 }
+
+.meta {
+  font-size: 14px;
+}
+
+/* 状态 */
+.active {
+  color: var(--state-success);
+}
+
+.inactive {
+  color: var(--state-danger);
+}
+
+/* =========================
+ * 操作按钮
+ * ========================= */
 
 .actions {
   display: flex;
@@ -287,53 +328,82 @@ onMounted(() => {
 
 .btn {
   padding: 6px 10px;
-  border: none;
   border-radius: 4px;
   cursor: pointer;
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-base);
 }
 
 .btn.primary {
-  background: #2563eb;
-  color: #fff;
+  border-color: var(--state-success);
+  color: var(--state-success);
 }
 
-.ok {
-  color: #16a34a;
+.btn.ghost {
+  opacity: 0.8;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* =========================
-   Modal
-========================= */
+ * Modal 遮罩
+ * ========================= */
+
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 999;
 }
 
+/* =========================
+ * Modal 内容
+ * ========================= */
+
 .modal-card {
-  background: #fff;
+  background: var(--bg-card);
+  color: var(--text-primary);
+
   padding: 16px;
   border-radius: 8px;
   width: 90%;
   max-width: 360px;
+
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  border: 1px solid var(--border-base);
 }
 
 .modal-user {
   font-size: 14px;
-  color: #555;
+  color: var(--text-secondary);
 }
 
+/* 输入 / 选择框 */
 .modal-card input,
 .modal-card select {
   padding: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
 }
 
+.modal-card input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Modal 操作区 */
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -341,8 +411,9 @@ onMounted(() => {
 }
 
 /* =========================
-   PC 适配
-========================= */
+ * PC 适配
+ * ========================= */
+
 @media (min-width: 640px) {
   .user-card {
     flex-direction: row;
