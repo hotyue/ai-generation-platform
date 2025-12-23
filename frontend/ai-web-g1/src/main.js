@@ -8,6 +8,9 @@ import './style.css'
 // ⭐ Auth Store
 import { useAuthStore } from '@/stores/auth'
 
+// ⭐ Account Status WS
+import { startAccountStatusWS } from '@/utils/ws'
+
 const app = createApp(App)
 
 /**
@@ -33,13 +36,13 @@ const authStore = useAuthStore(pinia)
  * 设计原则（非常重要）：
  *
  * - ❗ App 必须能在「被封禁态」下正常启动
- * - ❗ main.ts 不负责裁决账号权限
- * - ❗ main.ts 只负责：
+ * - ❗ main.js 不负责裁决账号权限
+ * - ❗ main.js 只负责：
  *     - 尝试恢复登录态
  *     - 失败就清 token
  *     - 永远不阻断 mount
  *
- * ❌ main.ts 里禁止：
+ * ❌ main.js 里禁止：
  *   - alert
  *   - router.replace
  *   - 强制退出逻辑
@@ -59,6 +62,24 @@ const bootstrap = async () => {
     } catch (err) {
       console.warn('[bootstrap] fetchMe failed, clear token', err)
       authStore.clearToken()
+    }
+  }
+
+  /**
+   * =========================
+   * ⭐ v1.0.11：启动账号状态 WS
+   * =========================
+   *
+   * 设计裁决：
+   * - 只在“用户态已稳定”后启动
+   * - 不关心 account_status
+   * - WS 失败不影响启动
+   */
+  if (authStore.token) {
+    try {
+      startAccountStatusWS(authStore.token)
+    } catch (err) {
+      console.warn('[bootstrap] startAccountStatusWS failed', err)
     }
   }
 

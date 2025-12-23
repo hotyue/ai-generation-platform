@@ -6,6 +6,14 @@ import {
   clearToken as clearPersistToken
 } from '@/utils/auth'
 
+/**
+ * ⭐ v1.0.11：WS 生命周期由 authStore 统一接管
+ */
+import {
+  startAccountStatusWS,
+  stopAccountStatusWS,
+} from '@/utils/ws'
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: getToken() || null,
@@ -54,9 +62,30 @@ export const useAuthStore = defineStore('auth', {
 
       // 切换账号时，强制重新拉 me
       this.meLoaded = false
+
+      /**
+       * ⭐ v1.0.11 关键补齐：
+       * token 成立 = 会话建立
+       * → 立刻启动 WS
+       */
+      try {
+        startAccountStatusWS(token)
+      } catch {
+        // WS 启动失败不影响登录主流程
+      }
     },
 
     clearToken() {
+      /**
+       * ⭐ v1.0.11：
+       * 会话终止 → 先停 WS
+       */
+      try {
+        stopAccountStatusWS()
+      } catch {
+        // ignore
+      }
+
       this.token = null
       this.user = null
       this.quota = null

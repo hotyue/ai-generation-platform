@@ -9,7 +9,18 @@ import { useAuthStore } from '@/stores/auth'
  * =========================
  */
 let hasForcedLogout = false
-let isLoggingOut = false   // ⭐ 新增：退出进行中熔断
+let isLoggingOut = false   // ⭐ 退出进行中熔断
+
+/**
+ * =========================
+ * ⭐ v1.0.11 关键补丁
+ * 新会话必须显式清理 HTTP 退出态
+ * =========================
+ */
+export function resetHttpLogoutState() {
+  hasForcedLogout = false
+  isLoggingOut = false
+}
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -18,25 +29,32 @@ const http = axios.create({
 
 /**
  * =========================
- * 请求拦截
+ * 请求拦截（v1.0.11 修正版）
  * =========================
  */
 http.interceptors.request.use((config) => {
+  /**
+   * ⭐ 已进入退出流程，直接中断
+   */
   if (isLoggingOut) {
-    // ⭐ 退出中，直接中断请求
     return Promise.reject(new axios.Cancel('Logging out'))
   }
 
+  /**
+   * ⭐ 正常注入 token
+   * ❗ v1.0.11：HTTP 层不再裁决 account_status
+   */
   const token = getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
   return config
 })
 
 /**
  * =========================
- * 响应拦截（最终稳定版）
+ * 响应拦截（v1.0.11 稳定裁剪版）
  * =========================
  */
 http.interceptors.response.use(
@@ -47,7 +65,7 @@ http.interceptors.response.use(
 
     /**
      * =========================
-     * ⭐ 第一熔断：已在退出流程中
+     * 已在退出流程中，直接放行错误
      * =========================
      */
     if (isLoggingOut || hasForcedLogout) {
@@ -55,15 +73,11 @@ http.interceptors.response.use(
     }
 
     /**
-     * =========================
-     * 无 response（被中断的并发请求）
-     * =========================
+     * 无 response（被中断 / Cancel / 网络异常）
      */
     if (!err.response) {
       return Promise.reject(err)
     }
-
-    const status = err.response.status
 
     /**
      * =========================
@@ -76,22 +90,16 @@ http.interceptors.response.use(
 
     /**
      * =========================
-     * 401 / 403：账号治理入口（只允许一个）
+     * ⚠️ v1.0.11 裁决重点（保持不动）
+     *
+     * HTTP 层：
+     * - 不基于 401 / 403 推断 account_status
+     * - 不执行 logout / 跳转
+     *
+     * 所有账号状态裁决：
+     * → 由 WS + Router 统一完成
      * =========================
      */
-    if ((status === 401 || status === 403) && !isLoggingOut) {
-      isLoggingOut = true
-
-      try {
-        await authStore.fetchMe()
-        // fetchMe 成功，说明只是普通 403
-        isLoggingOut = false
-        return Promise.reject(err)
-      } catch {
-        forceLogout(authStore)
-        return Promise.reject(err)
-      }
-    }
 
     return Promise.reject(err)
   }
@@ -99,7 +107,7 @@ http.interceptors.response.use(
 
 /**
  * =========================
- * 强制退出（原子操作）
+ * 强制退出（保留，仅供 WS / 显式调用）
  * =========================
  */
 function forceLogout(authStore) {

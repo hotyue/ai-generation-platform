@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAccountStatusStore } from '@/stores/accountStatus'
 
 import Login from '../views/Login.vue'
 import Generate from '../views/Generate.vue'
@@ -35,35 +36,16 @@ const routes = [
     component: MainLayout,
     meta: { requiresAuth: true },
     children: [
-      {
-        path: '',
-        redirect: '/generate',
-      },
-      {
-        path: 'generate',
-        name: 'Generate',
-        component: Generate,
-      },
-      {
-        path: 'history',
-        name: 'History',
-        component: History,
-      },
+      { path: '', redirect: '/generate' },
+      { path: 'generate', name: 'Generate', component: Generate },
+      { path: 'history', name: 'History', component: History },
       {
         path: 'profile',
         name: 'Profile',
         component: () => import('../views/Profile.vue'),
       },
-      {
-        path: 'plans',
-        name: 'Plans',
-        component: Plans,
-      },
-      {
-        path: 'quota',
-        name: 'Quota',
-        component: QuotaLog,
-      },
+      { path: 'plans', name: 'Plans', component: Plans },
+      { path: 'quota', name: 'Quota', component: QuotaLog },
     ],
   },
 
@@ -78,11 +60,7 @@ const routes = [
       requiresAdmin: true,
     },
     children: [
-      {
-        path: '',
-        name: 'AdminHome',
-        component: AdminHome,
-      },
+      { path: '', name: 'AdminHome', component: AdminHome },
       {
         path: 'users',
         name: 'AdminUsers',
@@ -104,11 +82,19 @@ const router = createRouter({
 
 /**
  * =========================
- * 全局路由守卫（v1.0.10 冻结版）
+ * 全局路由守卫（v1.0.11 · 最终裁决版）
  * =========================
+ *
+ * 裁决分层原则（已冻结）：
+ *
+ * - authStore：会话状态（token / user）
+ * - accountStatusStore：账号状态事实（WS）
+ * - router：最终裁决者（允许终结会话）
  */
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+  const accountStatusStore = useAccountStatusStore()
+
   const isLoggedIn = authStore.isLoggedIn
 
   // =========================
@@ -128,7 +114,7 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // =========================
-  // 3️⃣ Admin 权限裁决（只按 role）
+  // 3️⃣ Admin 权限裁决（保持原逻辑）
   // =========================
   if (to.meta.requiresAdmin) {
     try {
@@ -148,30 +134,22 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // =========================
-  // 4️⃣ account_status 路由级兜底（关键）
+  // 4️⃣ account_status 强裁决（v1.0.11 核心）
   // =========================
-  if (isLoggedIn && to.meta.requiresAuth) {
-    try {
-      if (!authStore.user) {
-        await authStore.fetchMe()
-      }
+  /**
+   * 设计结论（已确认）：
+   *
+   * - banned 是“会话级终止状态”
+   * - 一旦进入 banned
+   * - 任意路由行为 == 用户继续使用意图
+   * - 必须立即、不可逆地终结会话
+   */
+  if (isLoggedIn && accountStatusStore.status === 'banned') {
+    // ⭐ 核心修复点：先终结会话
+    authStore.clearToken()
 
-      const status = authStore.accountStatus
-
-      // 🚫 封禁账号：强制清空并回登录页
-      if (status === 'banned') {
-        authStore.clearToken()
-        next('/login')
-        return
-      }
-
-      // 🚧 受限账号：禁止进入 generate
-      if (status === 'restricted' && to.path === '/generate') {
-        next('/history')
-        return
-      }
-    } catch {
-      authStore.clearToken()
+    // 再跳转登录页（避免 SPA 半死亡态）
+    if (to.path !== '/login') {
       next('/login')
       return
     }

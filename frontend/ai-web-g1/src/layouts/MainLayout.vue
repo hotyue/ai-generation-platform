@@ -51,7 +51,6 @@
         >
           账户
         </router-link>
-        
       </nav>
 
       <!-- =========================
@@ -103,14 +102,15 @@
 </template>
 
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import http from '@/utils/http'
+import { useAccountStatusStore } from '@/stores/accountStatus'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const accountStatusStore = useAccountStatusStore()
 
 /**
  * =========================
@@ -121,13 +121,18 @@ const isActive = (path) => route.path.startsWith(path)
 
 /**
  * =========================
- * quota / account_status
+ * quota
  * =========================
  */
 const quota = computed(() => authStore.quota)
 
+/**
+ * =========================
+ * account_status（v1.0.11 唯一事实源）
+ * =========================
+ */
 const accountStatus = computed(() => {
-  return authStore.user?.account_status || 'normal'
+  return accountStatusStore.status
 })
 
 /**
@@ -164,43 +169,12 @@ const statusClass = computed(() => {
 
 /**
  * =========================
- * 初始化拉取用户信息（强约束）
- * =========================
- */
-const fetchMe = async () => {
-  if (!authStore.token) return
-
-  try {
-    await authStore.fetchMe()
-
-    // 🚫 banned：立刻踢出，不允许停留在 Layout
-    if (authStore.accountStatus === 'banned') {
-      authStore.clearToken()
-      router.replace('/login')
-    }
-  } catch {
-    authStore.clearToken()
-    router.replace('/login')
-  }
-}
-
-onMounted(fetchMe)
-
-// token 变化（登录 / 刷新）时同步
-watch(
-  () => authStore.token,
-  () => {
-    fetchMe()
-  }
-)
-
-/**
- * =========================
- * 退出登录
+ * 退出登录（显式行为）
  * =========================
  */
 const logout = () => {
   authStore.clearToken()
+  accountStatusStore.reset()
   router.push('/login')
 }
 </script>
