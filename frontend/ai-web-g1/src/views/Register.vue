@@ -87,27 +87,100 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
+/* =========================
+ * 页面容器
+ * ========================= */
+
 .auth-container {
   max-width: 360px;
   margin: 100px auto;
+  padding: 24px;
+
+  background: var(--bg-card);
+  border: 1px solid var(--border-base);
+  border-radius: 8px;
+
+  color: var(--text-primary);
 }
+
+/* =========================
+ * 表单项
+ * ========================= */
 
 .form-item {
   margin-bottom: 16px;
 }
 
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* =========================
+ * 输入框
+ * ========================= */
+
 input {
   width: 100%;
   padding: 8px;
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+
+  border: 1px solid var(--border-base);
+  border-radius: 4px;
 }
+
+input::placeholder {
+  color: var(--text-muted);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--state-success);
+}
+
+/* =========================
+ * 按钮
+ * ========================= */
 
 button {
   width: 100%;
   padding: 10px;
+
+  border-radius: 6px;
+  border: 1px solid var(--border-base);
+
+  background: var(--bg-card);
+  color: var(--text-primary);
+
+  font-size: 15px;
 }
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================
+ * 底部链接
+ * ========================= */
 
 .link {
   margin-top: 12px;
   text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.link a {
+  color: var(--state-success);
+  text-decoration: none;
+}
+
+.link a:hover {
+  text-decoration: underline;
 }
 </style>
