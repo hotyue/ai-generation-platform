@@ -38,3 +38,23 @@ export function applyUserPlan(userId, planId) {
     `/admin/users/${userId}/apply-plan/${planId}`
   )
 }
+
+// ================================
+// account_status 管理（v1.0.15）
+// ================================
+
+export function restrictUser(userId) {
+  return http.post(`/admin/users/${userId}/restrict`)
+}
+
+export function unrestrictUser(userId) {
+  return http.post(`/admin/users/${userId}/unrestrict`)
+}
+
+export function banUser(userId) {
+  return http.post(`/admin/users/${userId}/ban`)
+}
+
+export function unbanUser(userId) {
+  return http.post(`/admin/users/${userId}/unban`)
+}
