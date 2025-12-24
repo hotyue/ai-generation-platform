@@ -6,16 +6,15 @@ let ws = null
 let currentToken = null
 let pendingTimer = null
 
-// ⭐ 新增：登录页调用 start 时先挂起，等路由离开登录页再真正启动
+// ⭐ 登录页挂起机制
 let pendingToken = null
 let hasRouteHook = false
 
 /**
  * 从 API_BASE_URL 派生 WS Base
- * 规则：
- *   http  -> ws
- *   https -> wss
- *   去掉 /api
+ * http  -> ws
+ * https -> wss
+ * 去掉 /api
  */
 function getWsBaseUrl() {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
@@ -36,7 +35,6 @@ function ensureRouteHook() {
   if (hasRouteHook) return
   hasRouteHook = true
 
-  // 只注册一次：离开登录/注册页时，如果有挂起 token，就启动
   router.afterEach(() => {
     if (!pendingToken) return
     const path = router.currentRoute.value.path
@@ -44,7 +42,6 @@ function ensureRouteHook() {
 
     const token = pendingToken
     pendingToken = null
-    // 这里会走正常启动逻辑（含 token 变化清理）
     startAccountStatusWS(token)
   })
 }
@@ -60,8 +57,7 @@ export function startAccountStatusWS(token) {
   const path = router.currentRoute.value.path
 
   /**
-   * ⭐ 关键修复点 A（替代“硬拦截”）
-   * 在登录/注册页被调用时，不丢弃，而是挂起等待路由切走后再启动
+   * 登录 / 注册页 → 挂起，等待离开再启动
    */
   if (isGuestPath(path)) {
     pendingToken = token
@@ -70,23 +66,20 @@ export function startAccountStatusWS(token) {
   }
 
   /**
-   * ⭐ 关键修复点 1
-   * token 未变化且 ws 存在 → 不重复建立
+   * token 未变化且 ws 已存在 → 不重复建立
    */
   if (ws && currentToken === token) {
     return
   }
 
   /**
-   * ⭐ 关键修复点 2
-   * token 变化 / 旧 ws 残留 → 强制清理
+   * token 变化 / 残留 ws → 强制清理
    */
   stopAccountStatusWS()
-
   currentToken = token
 
   /**
-   * ⭐ 防抖：避免刚切页时反复建连（可保留）
+   * 防抖：避免切页抖动
    */
   if (pendingTimer) {
     clearTimeout(pendingTimer)
@@ -96,7 +89,6 @@ export function startAccountStatusWS(token) {
   pendingTimer = setTimeout(() => {
     pendingTimer = null
 
-    // 再次确认：如果又回到登录/注册页，就不启动，继续挂起
     const curPath = router.currentRoute.value.path
     if (isGuestPath(curPath)) {
       pendingToken = token
@@ -105,6 +97,7 @@ export function startAccountStatusWS(token) {
     }
 
     const accountStatusStore = useAccountStatusStore()
+    const authStore = useAuthStore()
 
     const wsBaseUrl = getWsBaseUrl()
     const url = `${wsBaseUrl}/ws/account-status?token=${token}`
@@ -113,15 +106,37 @@ export function startAccountStatusWS(token) {
     ws = localWs
 
     localWs.onmessage = (event) => {
-      // 防止旧 ws 回调污染新会话
+      // 防止旧 ws 污染
       if (localWs !== ws) return
 
       try {
         const data = JSON.parse(event.data)
+
+        /**
+         * =========================
+         * account_status（v1.0.11）
+         * =========================
+         */
         if (data.type === 'account_status') {
-          // ⭐ WS 只同步事实，不做退出裁决
           accountStatusStore.setStatus(data.account_status)
+          return
         }
+
+        /**
+         * =========================
+         * quota（v1.0.16 · WS 主同步）
+         * =========================
+         */
+        if (data.event_type === 'USER_QUOTA_UPDATED') {
+          const balance = data?.payload?.balance
+          if (typeof balance === 'number') {
+            // ⭐ WS 为主：直接覆盖 authStore.quota
+            authStore.setQuota(balance)
+          }
+          return
+        }
+
+        // 其他事件：忽略（未来可扩展）
       } catch (e) {
         // 非法消息忽略
       }
@@ -154,7 +169,6 @@ export function stopAccountStatusWS() {
     pendingTimer = null
   }
 
-  // ⭐ 停止时也清掉挂起 token，避免退出后又被 afterEach 拉起
   pendingToken = null
 
   if (ws) {
@@ -166,7 +180,7 @@ export function stopAccountStatusWS() {
 
 /**
  * =========================
- * 明确的“会话级退出”
+ * 会话级强制退出
  * =========================
  */
 export function forceLogout() {
@@ -179,7 +193,7 @@ export function forceLogout() {
   // 2️⃣ 清理账号态
   accountStatusStore.reset()
 
-  // 3️⃣ 关闭 WS（也会清 pendingToken）
+  // 3️⃣ 关闭 WS
   stopAccountStatusWS()
 
   // 4️⃣ 跳转登录页
