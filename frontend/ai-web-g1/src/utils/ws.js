@@ -110,25 +110,31 @@ export function startAccountStatusWS(token) {
       if (localWs !== ws) return
 
       try {
-        const data = JSON.parse(event.data)
+        const msg = JSON.parse(event.data)
+        const { event_type, payload } = msg || {}
+
+        if (!event_type) return
 
         /**
          * =========================
-         * account_status（v1.0.11）
+         * account_status（v1.0.17）
          * =========================
          */
-        if (data.type === 'account_status') {
-          accountStatusStore.setStatus(data.account_status)
+        if (event_type === 'ACCOUNT_STATUS_UPDATED') {
+          const status = payload?.account_status
+          if (typeof status === 'string') {
+            accountStatusStore.setStatus(status)
+          }
           return
         }
 
         /**
          * =========================
-         * quota（v1.0.16 · WS 主同步）
+         * quota（v1.0.16+ · WS 主同步）
          * =========================
          */
-        if (data.event_type === 'USER_QUOTA_UPDATED') {
-          const balance = data?.payload?.balance
+        if (event_type === 'USER_QUOTA_UPDATED') {
+          const balance = payload?.balance
           if (typeof balance === 'number') {
             // ⭐ WS 为主：直接覆盖 authStore.quota
             authStore.setQuota(balance)
