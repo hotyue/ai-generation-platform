@@ -2,9 +2,7 @@
   <div class="profile-page">
     <h1>账户信息</h1>
 
-    <!-- =========================
-         用户信息
-    ========================= -->
+    <!-- ========================= 用户信息 ========================= -->
     <section class="card">
       <h2>👤 用户信息</h2>
 
@@ -31,9 +29,7 @@
       </div>
     </section>
 
-    <!-- =========================
-         封禁提示（展示级）
-    ========================= -->
+    <!-- ========================= 封禁提示 ========================= -->
     <section
       v-if="accountStatus === 'banned'"
       class="card banned-hint"
@@ -43,9 +39,7 @@
       如有疑问，请联系管理员。
     </section>
 
-    <!-- =========================
-         配额信息（仅 normal / restricted）
-    ========================= -->
+    <!-- ========================= 配额信息 ========================= -->
     <section
       v-if="accountStatus !== 'banned'"
       class="card"
@@ -66,12 +60,10 @@
       </p>
     </section>
 
-    <!-- =========================
-         最近额度变动（仅 normal / restricted）
-    ========================= -->
+    <!-- ========================= 最近额度变动 ========================= -->
     <section
       v-if="accountStatus !== 'banned'"
-      class="card"
+      class="card quota-card"
     >
       <h2>📊 最近额度变动</h2>
 
@@ -82,22 +74,24 @@
       <div
         v-for="log in quotaLogs"
         :key="log.id"
-        class="quota-log-row"
+        class="info-row"
       >
+        <!-- 左列：原因 -->
+        <div class="cell-main ellipsis">
+          {{ reasonText(log.reason) }}
+        </div>
+
+        <!-- 中列：变动值（6ch） -->
         <div
-          class="change"
+          class="cell-mid mono"
           :class="log.change > 0 ? 'plus' : 'minus'"
         >
           {{ log.change > 0 ? '+' : '' }}{{ log.change }}
         </div>
 
-        <div class="log-info">
-          <div class="reason">
-            {{ reasonText(log.reason) }}
-          </div>
-          <div class="time">
-            {{ formatTime(log.created_at) }}
-          </div>
+        <!-- 右列：时间（14ch） -->
+        <div class="cell-end muted">
+          {{ formatTime(log.created_at) }}
         </div>
       </div>
 
@@ -106,12 +100,10 @@
       </p>
     </section>
 
-    <!-- =========================
-         套餐列表（仅 normal / restricted）
-    ========================= -->
+    <!-- ========================= 可用套餐 ========================= -->
     <section
       v-if="accountStatus !== 'banned'"
-      class="card"
+      class="card plan-card"
     >
       <h2>📦 可用套餐</h2>
 
@@ -122,19 +114,21 @@
       <div
         v-for="plan in plans"
         :key="plan.id"
-        class="plan"
+        class="info-row"
       >
-        <div class="plan-info">
-          <div class="plan-name">{{ plan.name }}</div>
-          <div class="plan-meta">
-            <span>{{ plan.quota }} 次</span>
-            <span>￥{{ plan.price }}</span>
-          </div>
+        <!-- 左列：套餐名 -->
+        <div class="cell-main ellipsis">
+          {{ plan.name }}
         </div>
 
-        <div class="plan-status">
-          <span v-if="plan.is_active" class="active">可用</span>
-          <span v-else class="inactive">已停用</span>
+        <!-- 中列：次数 + 价格（按内容宽度） -->
+        <div class="cell-mid mono">
+          {{ plan.quota }} 次 · ¥{{ plan.price }}
+        </div>
+
+        <!-- 右列：状态（8ch） -->
+        <div class="cell-end active">
+          可用
         </div>
       </div>
 
@@ -154,21 +148,8 @@ import { fetchPlans, fetchQuotaLogs } from '@/api'
 const authStore = useAuthStore()
 const accountStatusStore = useAccountStatusStore()
 
-/**
- * =========================
- * 用户信息（来自 authStore）
- * =========================
- */
 const me = computed(() => authStore.user)
-
-/**
- * =========================
- * account_status（WS 唯一事实源）
- * =========================
- */
-const accountStatus = computed(() => {
-  return accountStatusStore.status
-})
+const accountStatus = computed(() => accountStatusStore.status)
 
 const accountStatusText = computed(() => {
   switch (accountStatus.value) {
@@ -181,19 +162,9 @@ const accountStatusText = computed(() => {
   }
 })
 
-/**
- * =========================
- * 页面数据
- * =========================
- */
 const plans = ref([])
 const quotaLogs = ref([])
 
-/**
- * =========================
- * 数据加载（展示级）
- * =========================
- */
 const loadPlans = async () => {
   plans.value = await fetchPlans()
 }
@@ -205,11 +176,6 @@ const loadQuotaLogs = async () => {
   })
 }
 
-/**
- * =========================
- * 工具函数
- * =========================
- */
 const reasonText = (reason) => {
   if (!reason) return '未知变动'
   if (reason === 'manual_grant') return '管理员充值'
@@ -222,16 +188,20 @@ const reasonText = (reason) => {
 
 const formatTime = (t) => {
   if (!t) return '--'
-  return new Date(t).toLocaleString()
+
+  const d = new Date(t)
+  const MM = String(d.getMonth() + 1).padStart(2, '0')
+  const DD = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+
+  // 示例：12-24 21:35:08（明显比原来短）
+  return `${MM}/${DD} ${hh}:${mm}:${ss}`
 }
 
-/**
- * =========================
- * 初始化
- * =========================
- */
+
 onMounted(async () => {
-  // 页面展示级初始化
   if (accountStatus.value !== 'banned') {
     await Promise.all([
       loadPlans(),
@@ -240,11 +210,6 @@ onMounted(async () => {
   }
 })
 
-/**
- * =========================
- * account_status 实时联动（v1.0.11 核心）
- * =========================
- */
 watch(
   () => accountStatus.value,
   async (status) => {
@@ -283,10 +248,9 @@ watch(
 
 .card h2 {
   margin-bottom: 12px;
-  color: var(--text-primary);
 }
 
-/* ===== 行 ===== */
+/* ===== 基本行 ===== */
 .row {
   display: flex;
   justify-content: space-between;
@@ -295,28 +259,6 @@ watch(
 
 .label {
   color: var(--text-secondary);
-}
-
-/* ===== 账户状态（语义色，允许写死） ===== */
-.status.normal {
-  color: var(--state-success);
-}
-
-.status.restricted {
-  color: var(--state-warning);
-}
-
-.status.banned {
-  color: var(--state-danger);
-  font-weight: 600;
-}
-
-/* ===== 封禁提示 ===== */
-.banned-hint {
-  border: 1px solid var(--border-base);
-  background: var(--bg-muted);
-  color: var(--text-primary);
-  font-weight: 500;
 }
 
 /* ===== 配额 ===== */
@@ -328,10 +270,87 @@ watch(
 .quota-number {
   font-size: 36px;
   font-weight: bold;
-  color: var(--text-primary);
 }
 
 .hint {
   color: var(--text-secondary);
+}
+
+/* ===== 三段式信息行（最终稳定版） ===== */
+.info-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-base);
+}
+
+/* 左列：吃剩余空间 */
+.cell-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+/* 中列：默认按内容宽度 */
+.cell-mid {
+  flex: 0 0 auto;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* 右列：固定宽度 */
+.cell-end {
+  flex: 0 0 auto;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ===== 业务语义宽度裁决 ===== */
+
+/* 额度记录：中列固定 6 字符 */
+.quota-card .cell-mid {
+  flex-basis: 6ch;
+}
+
+/* 额度记录：时间固定 14 字符 */
+.quota-card .cell-end {
+  flex-basis: 14ch;
+}
+
+/* 套餐：中列按内容（不扩展） */
+.plan-card .cell-mid {
+  flex-basis: auto;
+}
+
+/* 套餐：状态固定 6 字符 */
+.plan-card .cell-end {
+  flex-basis: 6ch;
+}
+
+/* ===== 辅助 ===== */
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.plus {
+  color: var(--state-success);
+}
+
+.minus {
+  color: var(--state-danger);
+}
+
+.active {
+  color: var(--state-success);
 }
 </style>
