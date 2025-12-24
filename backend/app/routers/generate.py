@@ -54,19 +54,33 @@ def generate_for_user(
     )
     db.add(quota_log)
 
-    # 5️⃣ 提交 DB 事务（钱与事实先成立）
+    # 5️⃣ 提交 DB 事务（quota 最终落账）
+    # —— 从这一刻起，余额已成为系统事实，不可回退
     db.commit()
     db.refresh(current_user)
     db.refresh(history)
 
+    # v1.0.16：落账即推送
+    # 只要 quota 发生最终落账（无论扣减还是未来返还），
+    # 就必须在 commit 之后立即推送 WS 事实
+    try:
+        emit_user_quota_event(
+            user_id=current_user.id,
+            balance=current_user.quota,
+        )
+    except Exception:
+        # WS 推送失败不影响主流程
+        pass
+
     # 6️⃣ 调用 ComfyUI（外部系统）
     result = call_generate(req.prompt)
     if not result or "prompt_id" not in result:
-        # v1：不回滚 quota，只记录失败（后续补偿）
+        # v1：不回滚 quota，只记录失败（后续可补偿）
         history.status = "failed"
         db.add(history)
         db.commit()
         db.refresh(history)
+
         raise HTTPException(status_code=500, detail="生成任务提交失败")
 
     # 7️⃣ 回填 task_id
@@ -74,14 +88,6 @@ def generate_for_user(
     db.add(history)
     db.commit()
     db.refresh(history)
-
-    try:
-        emit_user_quota_event(
-            user_id=current_user.id,
-            balance=current_user.quota
-        )
-    except Exception:
-        pass
 
     return {
         "msg": "Task submitted",
