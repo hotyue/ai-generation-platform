@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.app.routers import task, generate, history, auth, admin, plan, quota
+from backend.app.routers import task, generate, history, auth, admin, plan, quota, ws
 from backend.app.ws import account_status
 from backend.app.middlewares.account_status import AccountStatusMiddleware  # v1.0.10
 
@@ -30,13 +30,11 @@ app.add_middleware(
 
 # =========================
 # ✅ v1.0.10：account_status 统一中间件
-# ⚠️ 必须在 include_router 之前
 # =========================
 app.add_middleware(AccountStatusMiddleware)
 
 # =========================
 # ⭐ v1.0.10：account_status 统一 Response 出口
-# ⭐ 目的：确保拒绝响应一定携带 CORS 头
 # =========================
 @app.middleware("http")
 async def account_status_response_wrapper(request: Request, call_next):
@@ -47,7 +45,7 @@ async def account_status_response_wrapper(request: Request, call_next):
         return JSONResponse(
             status_code=denied["status_code"],
             content={"detail": denied["detail"]},
-            headers=response.headers,  # ⭐ 保留 CORS / credentials 等头
+            headers=response.headers,
         )
 
     return response
@@ -64,7 +62,12 @@ app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
 app.include_router(plan.router, prefix=API_PREFIX)
 app.include_router(quota.router, prefix=API_PREFIX)
+
+# =========================
+# ✅ WebSocket 路由
+# =========================
 app.include_router(account_status.router)
+app.include_router(ws.router)
 
 @app.get("/")
 def root():
