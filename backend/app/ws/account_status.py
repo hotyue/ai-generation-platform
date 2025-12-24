@@ -6,6 +6,9 @@ from backend.app.models.user import User
 from backend.app.database import SessionLocal
 from backend.app.ws.manager import manager
 from backend.app.ws.events import build_user_ws_event  # ⭐ v1.0.17
+from backend.app.ws.versioning import extract_ws_protocol_version  # ⭐ v1.0.18 Phase 2.1
+from backend.app.ws.session_state import WSSessionState  # ⭐ v1.0.18 Phase 2.2
+from backend.app.ws.system_events import build_system_ws_event  # ⭐ v1.0.18 Phase 2.3
 
 router = APIRouter()
 
@@ -17,12 +20,24 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 
 async def _run_user_ws_session(websocket: WebSocket, user: User) -> None:
     """
-    v1.0.18 Phase 1：统一 user-level WS 会话行为（最小 diff）
-    - connect
-    - 连接成功立即推送 ACCOUNT_STATUS_UPDATED（v1.0.17 外壳）
-    - keepalive
-    - finally disconnect（覆盖 WebSocketDisconnect/其他异常/取消）
+    v1.0.18 Phase 2.3
+    统一 user-level WS 会话行为（在 Phase 2.2 基础上引入 system-level 治理事件）
+    - 识别 WS 协议 version（治理级）
+    - 会话状态机（CONNECTED → READY → CLOSED）
+    - v1：推送 system-level 事件
+    - v0：完全无感知
     """
+
+    # =========================
+    # WS 协议 version 识别（治理级）
+    # =========================
+    ws_version = extract_ws_protocol_version(websocket)
+
+    # =========================
+    # 会话状态机：CONNECTED
+    # =========================
+    session_state = WSSessionState.CONNECTED
+
     await manager.connect(user.id, websocket)
 
     # =========================
@@ -35,14 +50,47 @@ async def _run_user_ws_session(websocket: WebSocket, user: User) -> None:
             payload={"account_status": user.account_status},
         )
         await manager.send_to_user(user.id, event)
+        session_state = WSSessionState.READY
+
+        # =========================
+        # system-level 事件：READY
+        # 仅 ws_version == 1
+        # =========================
+        if ws_version == 1:
+            try:
+                await manager.send_to_user(
+                    user.id,
+                    build_system_ws_event("SYSTEM_WS_READY"),
+                )
+            except Exception:
+                pass
+
     except Exception:
-        # 维持现有“弱保证”语义：推送失败不影响会话建立
+        # 维持既有“弱保证”语义：
+        # 推送失败不影响会话建立，也不阻断后续保活
         pass
 
     try:
         while True:
             await websocket.receive_text()  # 保活
     finally:
+        # =========================
+        # system-level 事件：CLOSED
+        # 仅 ws_version == 1
+        # =========================
+        if ws_version == 1:
+            try:
+                await manager.send_to_user(
+                    user.id,
+                    build_system_ws_event("SYSTEM_WS_CLOSED"),
+                )
+            except Exception:
+                pass
+
+        # =========================
+        # 会话状态机：CLOSED
+        # =========================
+        session_state = WSSessionState.CLOSED
         manager.disconnect(user.id, websocket)
 
 
