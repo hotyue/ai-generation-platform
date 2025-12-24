@@ -47,7 +47,7 @@ ACCOUNT_STATUS_RULES = {
 }
 
 # ============================================================
-# 全局免登录路径
+# 全局免登录路径（HTTP 语义）
 # ============================================================
 EXEMPT_PATH_PREFIXES: Tuple[str, ...] = (
     "/docs",
@@ -111,13 +111,16 @@ class AccountStatusMiddleware(BaseHTTPMiddleware):
     """
     v1.0.10 · account_status 统一裁决中间件（最终冻结版）
 
-    设计原则：
-    - 不直接返回 Response
-    - 只通过 request.state.account_status_denied 传递裁决结果
-    - 每个请求最多一次裁决
+    v1.0.21 补充约束：
+    - WebSocket 请求不进入 account_status 裁决体系
+    - WebSocket 的鉴权与状态治理由 WS 内部完成
     """
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        # ⭐ v1.0.21：WebSocket 请求直接放行（不参与 HTTP account_status 裁决）
+        if request.scope.get("type") == "websocket":
+            return await call_next(request)
+
         # 0️⃣ CORS 预检
         if request.method == "OPTIONS":
             return await call_next(request)
@@ -189,7 +192,7 @@ class AccountStatusMiddleware(BaseHTTPMiddleware):
         if _is_exempt_account_status(path):
             return await call_next(request)
 
-        # 6️⃣ account_status 裁决（唯一入口）
+        # 6️⃣ account_status 裁决（HTTP 唯一入口）
         status_key = (user.account_status or "normal").strip()
         policy = ACCOUNT_STATUS_RULES.get(status_key)
 
