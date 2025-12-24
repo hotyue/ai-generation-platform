@@ -5,6 +5,7 @@ import os
 from backend.app.models.user import User
 from backend.app.database import SessionLocal
 from backend.app.ws.manager import manager
+from backend.app.ws.events import build_user_ws_event  # ⭐ v1.0.17
 
 router = APIRouter()
 
@@ -48,15 +49,16 @@ async def account_status_ws(websocket: WebSocket):
 
     # =========================
     # WS 建立成功 → 立即推送当前状态
+    # （v1.0.17 统一事件外壳）
     # =========================
     try:
-        await manager.send_to_user(
-            user.id,
-            {
-                "type": "account_status",
+        event = build_user_ws_event(
+            event_type="ACCOUNT_STATUS_UPDATED",
+            payload={
                 "account_status": user.account_status,
             },
         )
+        await manager.send_to_user(user.id, event)
     except Exception:
         pass
 
