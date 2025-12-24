@@ -54,7 +54,7 @@
 
       <div class="quota-box">
         <div class="quota-number">
-          {{ me?.quota ?? '--' }}
+          {{ authStore.quota ?? '--' }}
         </div>
         <div class="quota-desc">
           剩余生成次数
