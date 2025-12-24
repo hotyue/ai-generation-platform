@@ -1,17 +1,21 @@
 from fastapi import APIRouter, WebSocket, Depends
-from backend.app.ws.manager import manager
-from backend.app.routers.auth import get_current_user_ws  # 你已有 auth，可复用
+
+from backend.app.routers.auth import get_current_user_ws  # 复用既有 WS 鉴权
+from backend.app.ws.account_status import _run_user_ws_session  # Phase 1 统一会话实现
 
 router = APIRouter()
 
+
 @router.websocket("/ws")
-async def ws_endpoint(websocket: WebSocket, user=Depends(get_current_user_ws)):
-    await manager.connect(user.id, websocket)
-    try:
-        while True:
-            # v1：只做下行广播，忽略客户端消息
-            await websocket.receive_text()
-    except Exception:
-        pass
-    finally:
-        manager.disconnect(user.id, websocket)
+async def ws_endpoint(
+    websocket: WebSocket,
+    user=Depends(get_current_user_ws),
+):
+    """
+    v1.0.18 Phase 1
+    /ws 作为 user-level WS 主入口：
+    - 不再自持 connect / keepalive / disconnect
+    - 统一复用 account-status 的 WS 会话行为
+    - 行为与 /ws/account-status 完全一致
+    """
+    await _run_user_ws_session(websocket, user)
