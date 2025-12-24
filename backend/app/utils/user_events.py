@@ -10,23 +10,31 @@ logger = logging.getLogger(__name__)
 
 
 def build_quota_event(user_id: int, balance: int) -> dict:
+    """
+    v1.0.17 · quota WS 统一事件外壳
+    - 保持 USER_QUOTA_UPDATED 语义不变
+    - 保持 payload.balance 不变
+    """
     return {
-        "event_id": str(uuid.uuid4()),
+        "event_id": uuid.uuid4().hex,
         "event_type": "USER_QUOTA_UPDATED",
-        "user_id": user_id,
         "timestamp": int(time.time()),
-        "version": 1,
-        "payload": {"balance": balance},
+        "version": "v1.0.17",
+        "payload": {
+            "balance": balance,
+        },
     }
 
 
 def emit_user_quota_event(user_id: int, balance: int):
     """
-    v1.0.16：
+    v1.0.16 → v1.0.17：
     - quota WS 的唯一合法出口
     - 兼容 sync / async 调用环境
     - 以“最终落账事实”为推送依据
+    - 仅调整事件协议外壳，不改变并发模型
     """
+
     event = build_quota_event(user_id, balance)
 
     try:
