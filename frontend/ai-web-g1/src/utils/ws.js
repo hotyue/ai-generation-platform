@@ -5,6 +5,7 @@ import router from '@/router'
 let ws = null
 let currentToken = null
 let pendingTimer = null
+let wsSessionReady = false
 
 // ⭐ 登录页挂起机制
 let pendingToken = null
@@ -106,6 +107,7 @@ export function startAccountStatusWS(token) {
     ws = localWs
 
     localWs.onmessage = (event) => {
+
       // 防止旧 ws 污染
       if (localWs !== ws) return
 
@@ -114,6 +116,21 @@ export function startAccountStatusWS(token) {
         const { event_type, payload } = msg || {}
 
         if (!event_type) return
+
+        /**
+         * =========================
+         * system-level WS events
+         * =========================
+         */
+        if (event_type === 'SYSTEM_WS_READY') {
+          wsSessionReady = true
+          return
+        }
+
+        if (event_type === 'SYSTEM_WS_CLOSED') {
+          wsSessionReady = false
+          return
+        }
 
         /**
          * =========================
@@ -152,6 +169,7 @@ export function startAccountStatusWS(token) {
       if (localWs === ws) {
         ws = null
         currentToken = null
+        wsSessionReady = false
       }
     }
 
@@ -159,6 +177,7 @@ export function startAccountStatusWS(token) {
       if (localWs === ws) {
         ws = null
         currentToken = null
+        wsSessionReady = false
       }
     }
   }, 50)
