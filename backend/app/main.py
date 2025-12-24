@@ -66,8 +66,13 @@ app.include_router(quota.router, prefix=API_PREFIX)
 # =========================
 # ✅ WebSocket 路由
 # =========================
-app.include_router(account_status.router)
+# v1.0.23 冷停验证：
+# 历史 /ws/account-status WebSocket 入口不再注册进运行态
+# （保留代码，不删除、不退役，仅断开路由）
+# app.include_router(account_status.router)
+
 app.include_router(ws.router)
+
 
 @app.get("/")
 def root():
