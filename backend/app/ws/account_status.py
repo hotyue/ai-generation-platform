@@ -1,5 +1,4 @@
 from fastapi import APIRouter, WebSocket
-import jwt
 import os
 
 from backend.app.models.user import User
@@ -9,13 +8,9 @@ from backend.app.ws.events import build_user_ws_event  # ⭐ v1.0.17
 from backend.app.ws.versioning import extract_ws_protocol_version  # ⭐ v1.0.18 Phase 2.1
 from backend.app.ws.session_state import WSSessionState  # ⭐ v1.0.18 Phase 2.2
 from backend.app.ws.system_events import build_system_ws_event  # ⭐ v1.0.18 Phase 2.3
+from backend.app.ws.auth import authenticate_ws_user  # ⭐ v1.0.22 统一 WS 鉴权
 
 router = APIRouter()
-
-# =========================
-# JWT 配置（运行期读取）
-# =========================
-JWT_SECRET = os.getenv("JWT_SECRET")
 
 
 async def _run_user_ws_session(websocket: WebSocket, user: User) -> None:
@@ -96,32 +91,15 @@ async def _run_user_ws_session(websocket: WebSocket, user: User) -> None:
 
 @router.websocket("/ws/account-status")
 async def account_status_ws(websocket: WebSocket):
-    token = websocket.query_params.get("token")
-    if not token or not JWT_SECRET:
-        await websocket.close()
-        return
+    """
+    v1.0.22
+    /ws/account-status
+    - 行为保持不变
+    - 内部鉴权与用户加载统一抽取
+    """
 
-    # =========================
-    # WS 独立鉴权（v1.0.11）
-    # =========================
-    try:
-        payload = jwt.decode(
-            token,
-            JWT_SECRET,
-            algorithms=["HS256"],
-        )
-        user_id = int(payload.get("sub"))
-    except Exception:
-        await websocket.close()
+    user = await authenticate_ws_user(websocket)
+    if not user:
         return
-
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            await websocket.close()
-            return
-    finally:
-        db.close()
 
     await _run_user_ws_session(websocket, user)
