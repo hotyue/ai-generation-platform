@@ -100,7 +100,7 @@ export function startAccountStatusWS(token) {
     const authStore = useAuthStore()
 
     const wsBaseUrl = getWsBaseUrl()
-    const url = `${wsBaseUrl}/ws/account-status?token=${token}`
+    const url = `${wsBaseUrl}/ws?token=${token}`
 
     const localWs = new WebSocket(url)
     ws = localWs
