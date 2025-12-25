@@ -5,7 +5,6 @@ from backend.app.database import get_db
 from backend.app.models.quota_log import QuotaLog
 from backend.app.models.user import User
 from backend.app.routers.auth import get_current_user
-
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/quota", tags=["Quota"])
@@ -33,7 +32,6 @@ def list_quota_logs(
             "reason": log.reason,
             "related_plan_id": log.related_plan_id,
             "operator_id": log.operator_id,
-#            "created_at": log.created_at,
             "created_at": log.created_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
         }
         for log in logs
