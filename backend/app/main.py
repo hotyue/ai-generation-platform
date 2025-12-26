@@ -4,9 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.app.routers import task, generate, history, auth, admin, plan, quota, ws
-from backend.app.ws import account_status
 from backend.app.middlewares.account_status import AccountStatusMiddleware  # v1.0.10
 
+# =========================
+# 1️⃣ 创建 FastAPI 应用（原样）
+# =========================
 app = FastAPI(title="AI Generation Platform Backend")
 
 # =========================
@@ -77,3 +79,13 @@ app.include_router(ws.router)
 @app.get("/")
 def root():
     return {"msg": "Backend is running"}
+
+
+# ======================================================
+# 2️⃣ v1.0.28：API Canonical Path（⚠️关键修正点）
+# ======================================================
+# ❗ 不能使用 app.add_middleware
+# ❗ 必须在“文件末尾”用 ASGI 外层包裹
+from backend.app.middlewares.api_canonical_path import APICanonicalPathMiddleware
+
+app = APICanonicalPathMiddleware(app)
