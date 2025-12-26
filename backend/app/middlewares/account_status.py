@@ -33,7 +33,6 @@ ACCOUNT_STATUS_RULES = {
         allow=(
             ("GET", "/api/auth/me"),
             ("GET", "/api/history"),
-            ("GET", "/api/history/"),
             ("GET", "/api/plans"),
             ("GET", "/api/quota/logs"),
         ),
