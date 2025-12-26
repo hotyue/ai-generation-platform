@@ -79,8 +79,17 @@ def list_history(
                         # 成功生成任务累积
                         # =========================
                         before_total = current_user.total_success_tasks
-                        current_user.total_success_tasks += 1
-                        after_total = current_user.total_success_tasks
+
+                        # v1.0.30 · 解释性条款裁决：
+                        # 荣誉系统上线后的第一次成功生成任务
+                        # 无论是否新用户 / 是否首次登录 / 是否历史已成功生成
+                        # 均必须直接进入 1⭐（等价于 after_total_success_tasks = 10）
+                        if before_total == 0:
+                            after_total = 10
+                        else:
+                            after_total = before_total + 1
+
+                        current_user.total_success_tasks = after_total
 
                         snapshot_before = calculate_honor_levels(before_total)
                         snapshot_after = calculate_honor_levels(after_total)
