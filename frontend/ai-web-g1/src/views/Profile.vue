@@ -16,6 +16,18 @@
         <span>{{ me?.role || '--' }}</span>
       </div>
 
+      <!-- ===== 荣誉等级（v1.0.30） ===== -->
+      <div class="row">
+        <span class="label">荣誉等级</span>
+        <span class="honor-level">
+          <span :class="['honor-item', `level-${honorStore.crown}`]">👑</span>
+          <span :class="['honor-item', `level-${honorStore.diamond}`]">💎</span>
+          <span :class="['honor-item', `level-${honorStore.sun}`]">☀️</span>
+          <span :class="['honor-item', `level-${honorStore.moon}`]">🌙</span>
+          <span :class="['honor-item', `level-${honorStore.star}`]">⭐</span>
+        </span>
+      </div>
+
       <div class="row">
         <span class="label">账户状态</span>
         <span class="status" :class="accountStatus">
@@ -143,10 +155,12 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAccountStatusStore } from '@/stores/accountStatus'
+import { useHonorStore } from '@/stores/honor'
 import { fetchPlans, fetchQuotaLogs } from '@/api'
 
 const authStore = useAuthStore()
 const accountStatusStore = useAccountStatusStore()
+const honorStore = useHonorStore()
 
 const me = computed(() => authStore.user)
 const accountStatus = computed(() => accountStatusStore.status)
@@ -196,10 +210,8 @@ const formatTime = (t) => {
   const mm = String(d.getMinutes()).padStart(2, '0')
   const ss = String(d.getSeconds()).padStart(2, '0')
 
-  // 示例：12-24 21:35:08（明显比原来短）
   return `${MM}/${DD} ${hh}:${mm}:${ss}`
 }
-
 
 onMounted(async () => {
   if (accountStatus.value !== 'banned') {
@@ -261,6 +273,24 @@ watch(
   color: var(--text-secondary);
 }
 
+/* ===== 荣誉等级 ===== */
+.honor-level {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.honor-item {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* 等级强度映射（示例） */
+.level-1 { opacity: 0.3; }
+.level-2 { opacity: 0.45; }
+.level-3 { opacity: 0.6; }
+.level-4 { opacity: 0.8; }
+.level-5 { opacity: 1; }
+
 /* ===== 配额 ===== */
 .quota-box {
   text-align: center;
@@ -306,23 +336,18 @@ watch(
 }
 
 /* ===== 业务语义宽度裁决 ===== */
-
-/* 额度记录：中列固定 6 字符 */
 .quota-card .cell-mid {
   flex-basis: 6ch;
 }
 
-/* 额度记录：时间固定 14 字符 */
 .quota-card .cell-end {
   flex-basis: 14ch;
 }
 
-/* 套餐：中列按内容（不扩展） */
 .plan-card .cell-mid {
   flex-basis: auto;
 }
 
-/* 套餐：状态固定 6 字符 */
 .plan-card .cell-end {
   flex-basis: 6ch;
 }
