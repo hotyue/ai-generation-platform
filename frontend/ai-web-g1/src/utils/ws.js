@@ -1,5 +1,6 @@
 import { useAccountStatusStore } from '@/stores/accountStatus'
 import { useAuthStore } from '@/stores/auth'
+import { useHonorStore } from '@/stores/honor'
 import router from '@/router'
 
 let ws = null
@@ -99,6 +100,7 @@ export function startAccountStatusWS(token) {
 
     const accountStatusStore = useAccountStatusStore()
     const authStore = useAuthStore()
+    const honorStore = useHonorStore()
 
     const wsBaseUrl = getWsBaseUrl()
     const url = `${wsBaseUrl}/ws?token=${token}`
@@ -156,6 +158,16 @@ export function startAccountStatusWS(token) {
             // ⭐ WS 为主：直接覆盖 authStore.quota
             authStore.setQuota(balance)
           }
+          return
+        }
+
+        /**
+         * =========================
+         * honor system（v1.0.30）
+         * =========================
+         */
+        if (event_type === 'HONOR_LEVEL_UPDATED') {
+          honorStore.setHonor(payload)
           return
         }
 
