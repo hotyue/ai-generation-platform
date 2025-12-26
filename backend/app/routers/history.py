@@ -14,7 +14,7 @@ router = APIRouter(prefix="/history", tags=["History"])
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[HistoryItem],
 )
 def list_history(
