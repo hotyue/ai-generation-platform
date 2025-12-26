@@ -9,6 +9,7 @@ from backend.app.models.user import User
 from backend.app.routers.auth import get_current_user
 from backend.app.schemas.history import HistoryItem
 from backend.app.utils.http_client import call_result
+from backend.app.utils.honor_level import calculate_honor_levels
 
 router = APIRouter(prefix="/history", tags=["History"])
 
@@ -66,6 +67,19 @@ def list_history(
                     if images:
                         h.image_url = images[0].get("url")
                         h.status = "success"
+                        # v1.0.30 · 荣誉系统：成功生成任务累积
+                        user.total_success_tasks += 1
+
+                        snapshot = calculate_honor_levels(user.total_success_tasks)
+
+                        user.level_star = snapshot.level_star
+                        user.level_moon = snapshot.level_moon
+                        user.level_sun = snapshot.level_sun
+                        user.level_diamond = snapshot.level_diamond
+                        user.level_crown = snapshot.level_crown
+
+                        db.add(user)
+
                         db.add(h)
                         db.commit()
 
