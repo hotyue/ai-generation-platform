@@ -20,6 +20,15 @@ class User(Base):
     role = Column(String(20), default="user")  # user / admin
     quota = Column(BigInteger, default=0)      # 剩余可用生成次数或积分
 
+    # 荣誉系统（v1.0.30）
+    total_success_tasks = Column(Integer, nullable=False, default=0)
+
+    level_star = Column(Integer, nullable=False, default=0)
+    level_moon = Column(Integer, nullable=False, default=0)
+    level_sun = Column(Integer, nullable=False, default=0)
+    level_diamond = Column(Integer, nullable=False, default=0)
+    level_crown = Column(Integer, nullable=False, default=0)
+
     # 执行态（v1.0.9 引入）
     account_status = Column(
         String(16),
