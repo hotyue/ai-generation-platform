@@ -1,5 +1,6 @@
 from typing import List
 import random
+import asyncio
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -13,6 +14,9 @@ from backend.app.schemas.history import HistoryItem
 from backend.app.utils.http_client import call_result
 from backend.app.utils.honor_level import calculate_honor_levels
 from backend.app.utils.honor_judge import is_strength_upgrade
+
+from backend.app.ws.events import build_user_ws_event
+from backend.app.ws.manager import manager
 
 router = APIRouter(prefix="/history", tags=["History"])
 
@@ -46,9 +50,6 @@ def list_history(
         .order_by(History.id.desc())
     )
 
-    # =========================
-    # 只有显式传入参数时才分页
-    # =========================
     if limit is not None:
         query = query.limit(limit)
     if offset is not None:
@@ -81,7 +82,7 @@ def list_history(
                         current_user.total_success_tasks += 1
                         after_total = current_user.total_success_tasks
 
-                        # 计算 after 快照
+                        snapshot_before = calculate_honor_levels(before_total)
                         snapshot_after = calculate_honor_levels(after_total)
 
                         current_user.level_star = snapshot_after.level_star
@@ -107,11 +108,43 @@ def list_history(
                             )
                             db.add(quota_log)
 
+                            # =========================
+                            # v1.0.30 · 等级晋级 WS 推送
+                            # （仅强度晋级）
+                            # =========================
+                            try:
+                                event = build_user_ws_event(
+                                    event_type="HONOR_LEVEL_UPDATED",
+                                    payload={
+                                        "before": {
+                                            "total_success_tasks": before_total,
+                                            "level_star": snapshot_before.level_star,
+                                            "level_moon": snapshot_before.level_moon,
+                                            "level_sun": snapshot_before.level_sun,
+                                            "level_diamond": snapshot_before.level_diamond,
+                                            "level_crown": snapshot_before.level_crown,
+                                        },
+                                        "after": {
+                                            "total_success_tasks": after_total,
+                                            "level_star": snapshot_after.level_star,
+                                            "level_moon": snapshot_after.level_moon,
+                                            "level_sun": snapshot_after.level_sun,
+                                            "level_diamond": snapshot_after.level_diamond,
+                                            "level_crown": snapshot_after.level_crown,
+                                        },
+                                        "reward_quota_delta": reward_quota,
+                                    },
+                                )
+                                asyncio.create_task(
+                                    manager.send_to_user(current_user.id, event)
+                                )
+                            except Exception:
+                                # WS 推送失败不影响主流程
+                                pass
+
                         # =========================
                         # v1.0.30 · 等级事件记录
                         # =========================
-                        snapshot_before = calculate_honor_levels(before_total)
-
                         db.execute(
                             """
                             INSERT INTO honor_level_events (
@@ -171,8 +204,4 @@ def list_history(
                 # 任何异常都不影响列表返回
                 pass
 
-    # =========================
-    # v1.0.7 核心修复点
-    # 不再手工拼 dict
-    # =========================
     return records
