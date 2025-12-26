@@ -2,6 +2,14 @@
   <div class="profile-page">
     <h1>账户信息</h1>
 
+    <!-- ===== 荣誉更新提示（v1.0.30 · 极简 Banner） ===== -->
+    <div
+      v-if="showHonorBanner"
+      class="honor-banner"
+    >
+      🎉 荣誉等级已更新
+    </div>
+
     <!-- ========================= 用户信息 ========================= -->
     <section class="card">
       <h2>👤 用户信息</h2>
@@ -88,12 +96,10 @@
         :key="log.id"
         class="info-row"
       >
-        <!-- 左列：原因 -->
         <div class="cell-main ellipsis">
           {{ reasonText(log.reason) }}
         </div>
 
-        <!-- 中列：变动值（6ch） -->
         <div
           class="cell-mid mono"
           :class="log.change > 0 ? 'plus' : 'minus'"
@@ -101,7 +107,6 @@
           {{ log.change > 0 ? '+' : '' }}{{ log.change }}
         </div>
 
-        <!-- 右列：时间（14ch） -->
         <div class="cell-end muted">
           {{ formatTime(log.created_at) }}
         </div>
@@ -128,17 +133,14 @@
         :key="plan.id"
         class="info-row"
       >
-        <!-- 左列：套餐名 -->
         <div class="cell-main ellipsis">
           {{ plan.name }}
         </div>
 
-        <!-- 中列：次数 + 价格（按内容宽度） -->
         <div class="cell-mid mono">
           {{ plan.quota }} 次 · ¥{{ plan.price }}
         </div>
 
-        <!-- 右列：状态（8ch） -->
         <div class="cell-end active">
           可用
         </div>
@@ -162,6 +164,9 @@ const authStore = useAuthStore()
 const accountStatusStore = useAccountStatusStore()
 const honorStore = useHonorStore()
 
+const showHonorBanner = ref(false)
+let honorBannerTimer = null
+
 const me = computed(() => authStore.user)
 const accountStatus = computed(() => accountStatusStore.status)
 
@@ -178,6 +183,33 @@ const accountStatusText = computed(() => {
 
 const plans = ref([])
 const quotaLogs = ref([])
+
+/**
+ * ===== 荣誉等级变更反馈（Step 4） =====
+ * - 首次赋值不提示
+ * - 任一等级变化 → 显示一次 Banner
+ * - 自动消失
+ */
+watch(
+  () => ({
+    star: honorStore.star,
+    moon: honorStore.moon,
+    sun: honorStore.sun,
+    diamond: honorStore.diamond,
+    crown: honorStore.crown,
+  }),
+  (newVal, oldVal) => {
+    if (!oldVal) return
+
+    if (JSON.stringify(newVal) !== JSON.stringify(oldVal)) {
+      showHonorBanner.value = true
+      clearTimeout(honorBannerTimer)
+      honorBannerTimer = setTimeout(() => {
+        showHonorBanner.value = false
+      }, 3000)
+    }
+  }
+)
 
 const loadPlans = async () => {
   plans.value = await fetchPlans()
@@ -202,15 +234,8 @@ const reasonText = (reason) => {
 
 const formatTime = (t) => {
   if (!t) return '--'
-
   const d = new Date(t)
-  const MM = String(d.getMonth() + 1).padStart(2, '0')
-  const DD = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  const ss = String(d.getSeconds()).padStart(2, '0')
-
-  return `${MM}/${DD} ${hh}:${mm}:${ss}`
+  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
 }
 
 onMounted(async () => {
@@ -221,22 +246,6 @@ onMounted(async () => {
     ])
   }
 })
-
-watch(
-  () => accountStatus.value,
-  async (status) => {
-    if (status === 'banned') {
-      plans.value = []
-      quotaLogs.value = []
-      return
-    }
-
-    await Promise.all([
-      loadPlans(),
-      loadQuotaLogs(),
-    ])
-  }
-)
 </script>
 
 <style scoped>
@@ -247,6 +256,17 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* ===== 荣誉更新 Banner ===== */
+.honor-banner {
+  background: var(--state-success-bg, #e6f7e6);
+  color: var(--state-success, #2e7d32);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: 14px;
 }
 
 /* ===== 卡片 ===== */
@@ -284,7 +304,6 @@ watch(
   line-height: 1;
 }
 
-/* 等级强度映射（示例） */
 .level-1 { opacity: 0.3; }
 .level-2 { opacity: 0.45; }
 .level-3 { opacity: 0.6; }
@@ -306,7 +325,7 @@ watch(
   color: var(--text-secondary);
 }
 
-/* ===== 三段式信息行（最终稳定版） ===== */
+/* ===== 三段式信息行 ===== */
 .info-row {
   display: flex;
   align-items: center;
@@ -314,21 +333,18 @@ watch(
   border-bottom: 1px solid var(--border-base);
 }
 
-/* 左列：吃剩余空间 */
 .cell-main {
   flex: 1 1 auto;
   min-width: 0;
   text-align: left;
 }
 
-/* 中列：默认按内容宽度 */
 .cell-mid {
   flex: 0 0 auto;
   text-align: right;
   white-space: nowrap;
 }
 
-/* 右列：固定宽度 */
 .cell-end {
   flex: 0 0 auto;
   text-align: right;
