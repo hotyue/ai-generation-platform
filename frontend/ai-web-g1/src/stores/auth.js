@@ -14,6 +14,11 @@ import {
   stopAccountStatusWS,
 } from '@/utils/ws'
 
+/**
+ * ⭐ v1.0.30：荣誉状态派生 Store
+ */
+import { useHonorStore } from '@/stores/honor'
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: getToken() || null,
@@ -24,6 +29,7 @@ export const useAuthStore = defineStore('auth', {
      * - role
      * - quota
      * - account_status
+     * - level_* / total_success_tasks
      */
     user: null,
 
@@ -64,7 +70,7 @@ export const useAuthStore = defineStore('auth', {
       this.meLoaded = false
 
       /**
-       * ⭐ v1.0.11 关键补齐：
+       * ⭐ v1.0.11
        * token 成立 = 会话建立
        * → 立刻启动 WS
        */
@@ -77,7 +83,7 @@ export const useAuthStore = defineStore('auth', {
 
     clearToken() {
       /**
-       * ⭐ v1.0.11：
+       * ⭐ v1.0.11
        * 会话终止 → 先停 WS
        */
       try {
@@ -94,12 +100,32 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // =========================
-    // 用户数据
+    // 用户数据（唯一初始化入口）
     // =========================
     setUser(user) {
       this.user = user
       this.quota = user?.quota ?? null
       this.meLoaded = true
+
+      /**
+       * ⭐ v1.0.30
+       * 初始化荣誉状态（派生状态）
+       * 数据源：/auth/me
+       */
+      try {
+        const honorStore = useHonorStore()
+
+        honorStore.setHonor({
+          star: user?.level_star ?? 0,
+          moon: user?.level_moon ?? 0,
+          sun: user?.level_sun ?? 0,
+          diamond: user?.level_diamond ?? 0,
+          crown: user?.level_crown ?? 0,
+          total_success_tasks: user?.total_success_tasks ?? 0,
+        })
+      } catch {
+        // honor store 未就绪时，不阻断登录流程
+      }
     },
 
     setQuota(quota) {
@@ -107,7 +133,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // =========================
-    // User State Event（SSE / WS）
+    // User State Event（WS）
     // =========================
     applyUserEvent(event) {
       if (!event || !event.event_type) return
@@ -127,7 +153,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // =========================
-    // 获取当前用户（关键）
+    // 获取当前用户（/auth/me）
     // =========================
     async fetchMe(force = false) {
       if (!this.token) return
