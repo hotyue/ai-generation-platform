@@ -20,14 +20,14 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
-
 class UserOut(UTCModel):
     """
-    v1.0.10 User 输出 Schema（修正版）
+    v1.0.30 User 输出 Schema（荣誉字段与数据库精确对齐）
 
-    核心修复：
-    - 明确输出 account_status
-    - 作为所有前端状态判断的唯一事实源
+    说明：
+    - /auth/me 的初始化事实源
+    - 字段名严格对齐 users 表
+    - 不引入任何派生字段或映射逻辑
     """
 
     id: int
@@ -37,27 +37,31 @@ class UserOut(UTCModel):
 
     role: str
 
-    # ✅ 关键字段（本次问题根因）
-    account_status: str   # normal / restricted / banned
-
+    # ===== 账户状态 =====
+    account_status: str
     quota: int
     is_active: bool
     avatar_url: Optional[str]
     created_at: datetime
+
+    # ===== 荣誉系统（与 users 表字段完全一致）=====
+    total_success_tasks: int
+
+    level_star: int
+    level_moon: int
+    level_sun: int
+    level_diamond: int
+    level_crown: int
 
     # ORM → Schema
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer("created_at", when_used="json")
     def serialize_created_at(self, v: datetime):
-        """
-        将 created_at 输出为 UTC ISO8601（带 Z）
-        """
         if v.tzinfo is None:
             v = v.replace(tzinfo=timezone.utc)
         else:
             v = v.astimezone(timezone.utc)
-
         return v.isoformat().replace("+00:00", "Z")
 
 
