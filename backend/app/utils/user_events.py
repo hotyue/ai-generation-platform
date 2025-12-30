@@ -59,3 +59,40 @@ def emit_user_quota_event(user_id: int, balance: int):
 
     except Exception as e:
         logger.warning(f"emit_user_quota_event failed: {e}")
+
+def emit_honor_level_up_event(
+    user_id: int,
+    payload: dict,
+):
+    """
+    v1.0.30 · 荣誉升级 WS 事件
+    - 仅用于荣誉系统
+    - 不承担余额事实（余额仍由 USER_QUOTA_UPDATED 表达）
+    """
+    event = {
+        "event_id": uuid.uuid4().hex,
+        "event_type": "HONOR_LEVEL_UP",
+        "timestamp": int(time.time()),
+        "version": "v1.0.30",
+        "payload": payload,
+    }
+
+    try:
+        anyio.from_thread.run(
+            manager.send_to_user,
+            user_id,
+            event,
+        )
+        logger.info(f"[USER_EVENT][honor_level_up] {event}")
+
+    except RuntimeError:
+        try:
+            asyncio.create_task(
+                manager.send_to_user(user_id, event)
+            )
+            logger.info(f"[USER_EVENT][honor_level_up][async] {event}")
+        except Exception as e:
+            logger.warning(f"emit_honor_level_up_event async failed: {e}")
+
+    except Exception as e:
+        logger.warning(f"emit_honor_level_up_event failed: {e}")
