@@ -20,7 +20,7 @@
       </div>
 
       <div class="row">
-        <span class="label">角色</span>
+        <span class="label">用户角色</span>
         <span>{{ me?.role || '--' }}</span>
       </div>
 
@@ -304,6 +304,7 @@ onMounted(async () => {
   line-height: 1;
 }
 
+.level-0 { opacity: 0; }
 .level-1 { opacity: 0.3; }
 .level-2 { opacity: 0.45; }
 .level-3 { opacity: 0.6; }
