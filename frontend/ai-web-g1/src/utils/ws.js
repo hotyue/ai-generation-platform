@@ -109,14 +109,12 @@ export function startAccountStatusWS(token) {
     ws = localWs
 
     localWs.onmessage = (event) => {
-
       // 防止旧 ws 污染
       if (localWs !== ws) return
 
       try {
         const msg = JSON.parse(event.data)
         const { event_type, payload } = msg || {}
-
         if (!event_type) return
 
         /**
@@ -155,7 +153,6 @@ export function startAccountStatusWS(token) {
         if (event_type === 'USER_QUOTA_UPDATED') {
           const balance = payload?.balance
           if (typeof balance === 'number') {
-            // ⭐ WS 为主：直接覆盖 authStore.quota
             authStore.setQuota(balance)
           }
           return
@@ -163,16 +160,52 @@ export function startAccountStatusWS(token) {
 
         /**
          * =========================
-         * honor system（v1.0.30）
+         * honor system（v1.0.30 · 保留 + 扩展）
          * =========================
          */
-        if (event_type === 'HONOR_LEVEL_UPDATED') {
-          honorStore.setHonor(payload)
+        if (event_type === 'HONOR_LEVEL_UP') {
+          /**
+           * 1️⃣ Profile 页即时更新（原有逻辑，保持）
+           */
+          const after = payload?.after
+          if (after && typeof after === 'object') {
+            honorStore.setHonor({
+              star: Number(after.star ?? 0),
+              moon: Number(after.moon ?? 0),
+              sun: Number(after.sun ?? 0),
+              diamond: Number(after.diamond ?? 0),
+              crown: Number(after.crown ?? 0),
+              total_success_tasks: Number(
+                payload?.after_total_success_tasks ?? 0
+              ),
+            })
+          }
+
+          /**
+           * 2️⃣ 冗余余额同步（与 USER_QUOTA_UPDATED 等价）
+           */
+          const balance = payload?.balance
+          if (typeof balance === 'number') {
+            authStore.setQuota(balance)
+          }
+
+          /**
+           * 3️⃣ ⭐ 新增：全局一次性祝贺事件（5 秒滚动条用）
+           * - 不进 store
+           * - 不持久
+           * - 不影响现有页面逻辑
+           */
+          window.dispatchEvent(
+            new CustomEvent('HONOR_LEVEL_UP', {
+              detail: payload,
+            })
+          )
+
           return
         }
 
-        // 其他事件：忽略（未来可扩展）
-      } catch (e) {
+        // 其他事件：忽略
+      } catch {
         // 非法消息忽略
       }
     }
@@ -224,16 +257,10 @@ export function forceLogout() {
   const authStore = useAuthStore()
   const accountStatusStore = useAccountStatusStore()
 
-  // 1️⃣ 清理鉴权
   authStore.logout()
-
-  // 2️⃣ 清理账号态
   accountStatusStore.reset()
-
-  // 3️⃣ 关闭 WS
   stopAccountStatusWS()
 
-  // 4️⃣ 跳转登录页
   if (router.currentRoute.value.path !== '/login') {
     router.replace('/login')
   }
