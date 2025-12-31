@@ -1,6 +1,13 @@
 <template>
   <div class="layout">
     <!-- =========================
+         ⭐ 全局荣誉升级祝贺条（5 秒滚动）
+         - 仅监听 WS 事件
+         - 不参与任何业务判断
+    ========================= -->
+    <HonorToast />
+
+    <!-- =========================
          顶部导航
     ========================= -->
     <header class="navbar">
@@ -107,6 +114,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAccountStatusStore } from '@/stores/accountStatus'
 
+/* ⭐ 新增：全局荣誉升级 Toast */
+import HonorToast from '@/components/HonorToast.vue'
+
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -128,7 +138,7 @@ const quota = computed(() => authStore.quota)
 
 /**
  * =========================
- * account_status（v1.0.11 唯一事实源）
+ * account_status（唯一事实源）
  * =========================
  */
 const accountStatus = computed(() => {
@@ -169,7 +179,7 @@ const statusClass = computed(() => {
 
 /**
  * =========================
- * 退出登录（显式行为）
+ * 退出登录
  * =========================
  */
 const logout = () => {
@@ -180,7 +190,7 @@ const logout = () => {
 </script>
 
 <style scoped>
-/* 保留你原有样式，未做破坏性修改 */
+/* 原样保留你的样式，不做破坏性修改 */
 
 .layout {
   min-height: 100vh;
