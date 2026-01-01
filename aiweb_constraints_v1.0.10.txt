@@ -1,8 +1,0 @@
- constraint_name | constraint_type | table_name |    definition    
------------------+-----------------+------------+------------------
- users_pkey      | p               | users      | PRIMARY KEY (id)
- plans_pkey      | p               | plans      | PRIMARY KEY (id)
- histories_pkey  | p               | histories  | PRIMARY KEY (id)
- quota_logs_pkey | p               | quota_logs | PRIMARY KEY (id)
-(4 rows)
-
