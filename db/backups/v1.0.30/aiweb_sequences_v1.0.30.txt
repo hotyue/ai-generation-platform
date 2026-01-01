@@ -1,0 +1,9 @@
+       sequence_name       | start_value | increment | minimum_value |    maximum_value    
+---------------------------+-------------+-----------+---------------+---------------------
+ users_id_seq              | 1           | 1         | 1             | 2147483647
+ plans_id_seq              | 1           | 1         | 1             | 2147483647
+ histories_id_seq          | 1           | 1         | 1             | 2147483647
+ quota_logs_id_seq         | 1           | 1         | 1             | 2147483647
+ honor_level_events_id_seq | 1           | 1         | 1             | 9223372036854775807
+(5 rows)
+
