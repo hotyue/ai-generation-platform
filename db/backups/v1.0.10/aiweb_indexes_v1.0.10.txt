@@ -1,0 +1,18 @@
+ schemaname | tablename  |         indexname         |                                          indexdef                                           
+------------+------------+---------------------------+---------------------------------------------------------------------------------------------
+ public     | histories  | histories_pkey            | CREATE UNIQUE INDEX histories_pkey ON public.histories USING btree (id)
+ public     | histories  | ix_histories_id           | CREATE INDEX ix_histories_id ON public.histories USING btree (id)
+ public     | histories  | ix_histories_task_id      | CREATE INDEX ix_histories_task_id ON public.histories USING btree (task_id)
+ public     | plans      | plans_pkey                | CREATE UNIQUE INDEX plans_pkey ON public.plans USING btree (id)
+ public     | quota_logs | idx_quota_logs_created_at | CREATE INDEX idx_quota_logs_created_at ON public.quota_logs USING btree (created_at)
+ public     | quota_logs | idx_quota_logs_user_id    | CREATE INDEX idx_quota_logs_user_id ON public.quota_logs USING btree (user_id)
+ public     | quota_logs | quota_logs_pkey           | CREATE UNIQUE INDEX quota_logs_pkey ON public.quota_logs USING btree (id)
+ public     | users      | idx_users_account_status  | CREATE INDEX idx_users_account_status ON public.users USING btree (account_status)
+ public     | users      | ix_users_email            | CREATE UNIQUE INDEX ix_users_email ON public.users USING btree (email)
+ public     | users      | ix_users_id               | CREATE INDEX ix_users_id ON public.users USING btree (id)
+ public     | users      | ix_users_phone            | CREATE UNIQUE INDEX ix_users_phone ON public.users USING btree (phone)
+ public     | users      | ix_users_username         | CREATE UNIQUE INDEX ix_users_username ON public.users USING btree (username)
+ public     | users      | users_invitation_code_key | CREATE UNIQUE INDEX users_invitation_code_key ON public.users USING btree (invitation_code)
+ public     | users      | users_pkey                | CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)
+(14 rows)
+

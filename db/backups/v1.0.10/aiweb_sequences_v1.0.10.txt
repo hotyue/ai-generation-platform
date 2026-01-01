@@ -1,0 +1,8 @@
+ sequence_schema |   sequence_name   | data_type | start_value | minimum_value | maximum_value | increment 
+-----------------+-------------------+-----------+-------------+---------------+---------------+-----------
+ public          | histories_id_seq  | integer   | 1           | 1             | 2147483647    | 1
+ public          | plans_id_seq      | integer   | 1           | 1             | 2147483647    | 1
+ public          | quota_logs_id_seq | integer   | 1           | 1             | 2147483647    | 1
+ public          | users_id_seq      | integer   | 1           | 1             | 2147483647    | 1
+(4 rows)
+
