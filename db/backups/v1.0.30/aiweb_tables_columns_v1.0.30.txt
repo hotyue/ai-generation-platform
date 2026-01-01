@@ -1,0 +1,69 @@
+     table_name     |        column_name         |          data_type          | character_maximum_length | is_nullable 
+--------------------+----------------------------+-----------------------------+--------------------------+-------------
+ histories          | user_fact_consumed_at      | timestamp without time zone |                          | YES
+ users              | is_deleted                 | boolean                     |                          | YES
+ users              | inviter_id                 | integer                     |                          | YES
+ users              | created_at                 | timestamp without time zone |                          | YES
+ users              | updated_at                 | timestamp without time zone |                          | YES
+ users              | last_login_at              | timestamp without time zone |                          | YES
+ users              | total_success_tasks        | integer                     |                          | NO
+ users              | level_star                 | integer                     |                          | NO
+ users              | level_moon                 | integer                     |                          | NO
+ users              | level_sun                  | integer                     |                          | NO
+ users              | level_diamond              | integer                     |                          | NO
+ users              | level_crown                | integer                     |                          | NO
+ users              | user_fact_consumed_at      | timestamp without time zone |                          | YES
+ histories          | id                         | integer                     |                          | NO
+ histories          | user_id                    | integer                     |                          | YES
+ histories          | created_at                 | timestamp without time zone |                          | YES
+ histories          | honor_consumed_at          | timestamp without time zone |                          | YES
+ plans              | id                         | integer                     |                          | NO
+ plans              | quota                      | integer                     |                          | NO
+ plans              | duration_days              | integer                     |                          | YES
+ plans              | price                      | numeric                     |                          | YES
+ plans              | is_active                  | boolean                     |                          | YES
+ plans              | created_at                 | timestamp without time zone |                          | YES
+ honor_level_events | id                         | bigint                      |                          | NO
+ honor_level_events | user_id                    | integer                     |                          | NO
+ honor_level_events | before_total_success_tasks | integer                     |                          | NO
+ honor_level_events | after_total_success_tasks  | integer                     |                          | NO
+ honor_level_events | before_star                | integer                     |                          | NO
+ honor_level_events | after_star                 | integer                     |                          | NO
+ honor_level_events | before_moon                | integer                     |                          | NO
+ honor_level_events | after_moon                 | integer                     |                          | NO
+ honor_level_events | before_sun                 | integer                     |                          | NO
+ honor_level_events | after_sun                  | integer                     |                          | NO
+ honor_level_events | before_diamond             | integer                     |                          | NO
+ honor_level_events | after_diamond              | integer                     |                          | NO
+ honor_level_events | before_crown               | integer                     |                          | NO
+ honor_level_events | after_crown                | integer                     |                          | NO
+ honor_level_events | reward_quota_delta         | integer                     |                          | NO
+ honor_level_events | created_at                 | timestamp without time zone |                          | NO
+ quota_logs         | id                         | integer                     |                          | NO
+ quota_logs         | user_id                    | integer                     |                          | NO
+ quota_logs         | change                     | integer                     |                          | NO
+ quota_logs         | operator_id                | integer                     |                          | YES
+ quota_logs         | related_plan_id            | integer                     |                          | YES
+ quota_logs         | created_at                 | timestamp without time zone |                          | YES
+ users              | id                         | integer                     |                          | NO
+ users              | quota                      | bigint                      |                          | YES
+ users              | is_active                  | boolean                     |                          | YES
+ plans              | name                       | character varying           |                          | NO
+ plans              | description                | character varying           |                          | YES
+ histories          | task_id                    | character varying           |                          | YES
+ users              | username                   | character varying           |                          | NO
+ users              | password_hash              | character varying           |                          | NO
+ users              | email                      | character varying           |                          | YES
+ users              | phone                      | character varying           |                          | YES
+ users              | role                       | character varying           |                          | YES
+ histories          | prompt                     | character varying           |                          | NO
+ honor_level_events | trigger                    | character varying           |                       50 | NO
+ histories          | image_url                  | character varying           |                          | YES
+ users              | account_status             | character varying           |                       16 | NO
+ users              | avatar_url                 | character varying           |                          | YES
+ quota_logs         | reason                     | character varying           |                          | NO
+ users              | remark                     | character varying           |                          | YES
+ histories          | status                     | character varying           |                          | YES
+ users              | invitation_code            | character varying           |                          | YES
+(65 rows)
+
