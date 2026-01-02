@@ -15,7 +15,7 @@ import threading
 from datetime import datetime
 
 # ⚠️ 注意：保持原有导入方式不变
-from r2_uploader import upload_to_r2
+from app.services.archive import upload_to_r2
 
 
 # -----------------------------------------
