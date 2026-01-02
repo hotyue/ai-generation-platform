@@ -49,8 +49,16 @@ app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
 app.mount("/web", StaticFiles(directory="D:/AI-Web/web"), name="web")
 
 # 加载 workflow.json
-with open("workflow.json", "r", encoding="utf-8") as f:
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+WORKFLOW_PATH = os.path.join(
+    BASE_DIR,
+    "workflows",
+    "workflow.json",
+)
+
+with open(WORKFLOW_PATH, "r", encoding="utf-8") as f:
     WORKFLOW = json.load(f)
+
 
 PROMPT_NODE_ID = "45"
 SAVE_NODE_ID = "9"
