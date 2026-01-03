@@ -8,7 +8,6 @@ from backend.app.models.history import History
 from backend.app.models.user import User
 from backend.app.routers.auth import get_current_user
 from backend.app.schemas.history import HistoryItem
-from backend.app.utils.http_client import call_result
 
 router = APIRouter(prefix="/history", tags=["History"])
 
@@ -46,19 +45,11 @@ def list_history(
     records = query.all()
 
     # =========================
-    # 懒回填 image_url（仅展示优化）
-    # ⚠️ 不写 status，不 commit
+    # v1.0.31 · 历史展示 URL 选择
+    # archive_url 优先，image_url 兜底
     # =========================
     for h in records:
-        if h.status == "pending" and not h.image_url:
-            try:
-                result = call_result(h.task_id)
-                images = (result or {}).get("images", [])
-                if images:
-                    h.image_url = images[0].get("url")
-                    db.add(h)
-                    db.commit()
-            except Exception:
-                pass
+        if h.archive_url:
+            h.image_url = h.archive_url
 
     return records
