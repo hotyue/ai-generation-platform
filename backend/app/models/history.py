@@ -15,7 +15,16 @@ class History(Base):
 
     prompt = Column(String(500), nullable=False)
 
+    # image_url:
+    # - 对外展示使用的图片访问URL
+    # - 由后端裁决展示优先级
     image_url = Column(String(500), nullable=True)
+
+    # archive_url:
+    # - 内部归档访问URL
+    # - 作为增强事实存在
+    # - 不直接暴露给前端
+    archive_url = Column(String(500), nullable=True)
 
     # 任务状态：pending / success / failed
     status = Column(String(20), default="pending", nullable=False)

@@ -22,13 +22,14 @@ def list_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    v1.0.30 · 历史查询接口（只读）
 
-    - 查询历史记录
-    - 允许 image_url 懒回填（不推进状态）
-    - 不写 success / failed
-    - 不推进荣誉系统
+    """
+    v1.0.31 · 历史查询接口（只读）
+
+    - 查询用户历史记录
+    - 不推进生成状态
+    - 不进行任何事实回填
+    - 返回的 image_url 为后端裁决后的最优展示URL
     """
 
     query = (

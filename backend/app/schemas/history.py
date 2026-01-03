@@ -11,6 +11,14 @@ class HistoryItem(UTCModel):
     task_id: str
     prompt: str
     image_url: Optional[str]
+    """
+    历史记录的展示用图片URL。
+    由后端裁决返回：
+    - 若存在归档URL，则为归档访问路径
+    - 否则为生成阶段的临时访问路径
+    前端不得自行判断或拼接。
+    """
+
     status: str
     created_at: datetime
 
