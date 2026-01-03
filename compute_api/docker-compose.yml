@@ -1,0 +1,42 @@
+services:
+  compute-api:
+    build:
+      context: ./compute_api
+      dockerfile: docker/Dockerfile.api
+    container_name: compute-api
+    volumes:
+      - ${HOST_OUTPUT_DIR}:/data/outputs
+    environment:
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_ACCESS_KEY: ${R2_ACCESS_KEY}
+      R2_SECRET_KEY: ${R2_SECRET_KEY}
+      R2_BUCKET: ${R2_BUCKET}
+      R2_PUBLIC_BASE: ${R2_PUBLIC_BASE}
+
+      # 建议：为容器运行提供一个稳定的输出目录（不影响你代码里原默认值）
+      OUTPUT_DIR: /data/outputs
+
+      # 如果 ComfyUI 运行在宿主机 Windows 上，容器访问宿主机请用 host.docker.internal
+      # 若你未来算力机换 Linux，可改成宿主机 IP 或者把 ComfyUI 也容器化并进同网络
+      COMFY_API: ${COMFY_API}
+
+      # 临时访问域名/前缀：如果你用 tunnel 指到 nginx，那么这里写你的外网域名即可
+      # 若只在内网测试，可先写 http://<算力机IP>:8081/outputs
+      # PUBLIC_BASE_URL: http://host.docker.internal:8081/outputs
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+    ports:
+      - "0.0.0.0:9000:9000"   # ←【关键修复】
+    restart: always
+
+  compute-nginx:
+    build:
+      context: ./compute_api
+      dockerfile: docker/Dockerfile.nginx
+    container_name: compute-nginx
+    volumes:
+      - ${HOST_OUTPUT_DIR}:/data/outputs:ro
+    ports:
+      - "0.0.0.0:8081:80"
+    depends_on:
+      - compute-api
+    restart: always

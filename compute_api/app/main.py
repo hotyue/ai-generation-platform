@@ -32,33 +32,49 @@ app.add_middleware(
 )
 
 # -----------------------------------------
-# 配置区域
+# 配置区域（v1.0.31 冻结裁决）
 # -----------------------------------------
 
-COMFY_API = "http://127.0.0.1:8188"
+# ComfyUI API（必须由环境变量提供）
+COMFY_API = os.getenv("COMFY_API")
+if not COMFY_API:
+    raise RuntimeError("COMFY_API is required")
 
-OUTPUT_DIR = "D:/ComfyUI_windows_portable/ComfyUI/output"
+# 输出目录（Docker / 宿主统一语义）
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/data/outputs")
 
-# image_url（即时访问，原语义不变）
-PUBLIC_BASE_URL = "https://aiimg.598000.xyz/outputs"
+# image_url 统一由环境变量决定（语义冻结）
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL")
+if not PUBLIC_BASE_URL:
+    raise RuntimeError("PUBLIC_BASE_URL is required")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# 静态文件服务（原样保留）
-app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
-app.mount("/web", StaticFiles(directory="D:/AI-Web/web"), name="web")
+# -----------------------------------------
+# 静态文件服务
+# -----------------------------------------
 
+# ⚠️ 说明：
+# Docker + Nginx 场景下，/outputs 实际由 nginx 提供
+# 这里保留 mount 仅用于：
+# 1) Windows 直跑
+# 2) 调试兜底
+app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
+
+# web：仅在 Windows 本地调试存在
+WEB_DIR = os.getenv("WEB_DIR", "")
+if WEB_DIR and os.path.isdir(WEB_DIR):
+    app.mount("/web", StaticFiles(directory=WEB_DIR), name="web")
+
+
+# -----------------------------------------
 # 加载 workflow.json
+# -----------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-WORKFLOW_PATH = os.path.join(
-    BASE_DIR,
-    "workflows",
-    "workflow.json",
-)
+WORKFLOW_PATH = os.path.join(BASE_DIR, "workflows", "workflow.json")
 
 with open(WORKFLOW_PATH, "r", encoding="utf-8") as f:
     WORKFLOW = json.load(f)
-
 
 PROMPT_NODE_ID = "45"
 SAVE_NODE_ID = "9"
@@ -90,7 +106,7 @@ def queue_prompt(wf):
         "client_id": str(uuid.uuid4())
     }
 
-    resp = requests.post(f"{COMFY_API}/prompt", json=payload)
+    resp = requests.post(f"{COMFY_API}/prompt", json=payload, timeout=10)
     if resp.status_code != 200:
         raise RuntimeError(f"提交任务失败 {resp.status_code}: {resp.text}")
 
@@ -106,13 +122,9 @@ def find_output_files(prompt_id: str):
 
 
 # -----------------------------------------
-# Cloudflare R2 异步上传（原逻辑保留）
+# Cloudflare R2 异步上传
 # -----------------------------------------
 def async_upload_to_r2(fp: str, filename: str):
-    """
-    archive 路径规则（冻结）：
-    archive/yyyy/mm/dd/filename
-    """
     today = datetime.utcnow()
     object_key = (
         f"archive/"
@@ -159,11 +171,10 @@ def get_result(prompt_id: str, b64: int = 0):
 
         for fp in files:
             filename = os.path.basename(fp)
+
+            # image_url（语义冻结）
             url = f"{PUBLIC_BASE_URL}/{filename}"
 
-            # -----------------------------
-            # v1.0.31 扩展：archive 裁决
-            # -----------------------------
             today = datetime.utcnow()
             object_key = (
                 f"archive/"
@@ -175,40 +186,24 @@ def get_result(prompt_id: str, b64: int = 0):
 
             archive_url = upload_to_r2(fp, object_key)
 
-            if archive_url:
-                archive_status = "success"
-                archive_error = None
-            else:
-                archive_status = "failed"
-                archive_error = "upload_failed"
-
-            # -----------------------------
-            # 原有异步行为保留（不阻塞）
-            # -----------------------------
-            threading.Thread(
-                target=async_upload_to_r2,
-                args=(fp, filename),
-                daemon=True
-            ).start()
-
-            # -----------------------------
-            # 结果项（原字段全部保留）
-            # -----------------------------
             item = {
-                # 原有字段（完全不动）
                 "filename": filename,
                 "url": url,
                 "local_path": fp,
-
-                # v1.0.31 新增字段（兼容扩展）
                 "archive_url": archive_url,
-                "archive_status": archive_status,
-                "archive_error": archive_error,
+                "archive_status": "success" if archive_url else "failed",
+                "archive_error": None if archive_url else "upload_failed",
             }
 
             if b64 == 1:
                 with open(fp, "rb") as f:
                     item["base64"] = base64.b64encode(f.read()).decode()
+
+            threading.Thread(
+                target=async_upload_to_r2,
+                args=(fp, filename),
+                daemon=True
+            ).start()
 
             results.append(item)
 
@@ -219,10 +214,10 @@ def get_result(prompt_id: str, b64: int = 0):
         }
 
     # ---------------------------------
-    # 未生成 → pending（原逻辑不变）
+    # pending（保持原语义）
     # ---------------------------------
     try:
-        hist_resp = requests.get(f"{COMFY_API}/history/{prompt_id}")
+        hist_resp = requests.get(f"{COMFY_API}/history/{prompt_id}", timeout=5)
     except Exception:
         return {"status": "pending", "msg": "任务未开始或不存在"}
 
