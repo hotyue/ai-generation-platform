@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 # =========================
 # 核心事实推进器（单轮）
 # =========================
-
 def advance_pending_histories_once(db: Session):
     """
     扫描并推进 pending 状态的生成任务事实
@@ -38,6 +37,11 @@ def advance_pending_histories_once(db: Session):
     # ✅ 与数据库 timestamp 对齐：全部使用 naive UTC
     now = datetime.utcnow()
     timeout_at = now - timedelta(seconds=TIMEOUT_SECONDS)
+    archive_deadline = now - timedelta(seconds=ARCHIVE_ABSORB_WINDOW_SECONDS)
+
+    # =========================
+    # 1️⃣ 处理 pending 任务
+    # =========================
 
     pending_items = (
         db.query(History)
@@ -47,18 +51,14 @@ def advance_pending_histories_once(db: Session):
         .all()
     )
 
-    if not pending_items:
-        return
-
     for h in pending_items:
         try:
-            # ---------- 时间防御性处理 ----------
             created_at = h.created_at
-            if created_at.tzinfo is not None:
+            if created_at and created_at.tzinfo is not None:
                 created_at = created_at.replace(tzinfo=None)
 
             # ---------- 超时判定 ----------
-            if created_at < timeout_at:
+            if created_at and created_at < timeout_at:
                 h.status = "failed"
                 db.add(h)
                 db.commit()
@@ -90,11 +90,62 @@ def advance_pending_histories_once(db: Session):
                 )
 
         except Exception as e:
-            # ⚠️ 不在这里写 failed
-            # 任何异常交给下一轮或超时处理
             db.rollback()
             logger.warning(
                 "[advancer] error processing history id=%s task_id=%s err=%s",
+                h.id,
+                h.task_id,
+                e,
+            )
+
+    # =========================
+    # 2️⃣ 归档事实吸收扫描（v1.0.31）
+    # =========================
+
+    archive_candidates = (
+        db.query(History)
+        .filter(
+            History.status == "success",
+            History.archive_url.is_(None),
+            History.created_at.isnot(None),
+            History.created_at >= archive_deadline,
+        )
+        .order_by(History.created_at.asc())
+        .limit(BATCH_SIZE)
+        .all()
+    )
+
+    for h in archive_candidates:
+        try:
+            result = call_result(h.task_id)
+            if not result:
+                continue
+
+            images = result.get("images", [])
+            if not images:
+                continue
+
+            img = images[0]
+
+            if (
+                img.get("archive_status") == "success"
+                and img.get("archive_url")
+                and h.archive_url is None
+            ):
+                h.archive_url = img.get("archive_url")
+                db.add(h)
+                db.commit()
+
+                logger.info(
+                    "[advancer] history id=%s task_id=%s archive absorbed",
+                    h.id,
+                    h.task_id,
+                )
+
+        except Exception as e:
+            db.rollback()
+            logger.warning(
+                "[advancer] error absorbing archive for history id=%s task_id=%s err=%s",
                 h.id,
                 h.task_id,
                 e,
