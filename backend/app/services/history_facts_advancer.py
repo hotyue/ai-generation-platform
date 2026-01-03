@@ -9,19 +9,18 @@ from sqlalchemy.orm import Session
 from backend.app.database import SessionLocal
 from backend.app.models.history import History
 from backend.app.utils.http_client import call_result
+from backend.app.config_history_advancer import (
+    SCAN_INTERVAL_SECONDS,
+    TIMEOUT_SECONDS,
+    BATCH_SIZE,
+    ARCHIVE_ABSORB_WINDOW_SECONDS,
+)
+
 
 # ⚠️ 用 print 穿透 gunicorn / uvicorn 日志系统
 print(">>> HISTORY FACTS ADVANCER MODULE LOADED <<<", flush=True)
 
 logger = logging.getLogger(__name__)
-
-# =========================
-# 配置区（集中、可裁决）
-# =========================
-
-SCAN_INTERVAL_SECONDS = 3        # 每轮扫描间隔
-TIMEOUT_SECONDS = 60             # 超时判定（秒）
-BATCH_SIZE = 20                  # 单轮最大处理条目数
 
 # =========================
 # 核心事实推进器（单轮）
