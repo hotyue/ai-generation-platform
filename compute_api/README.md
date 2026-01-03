@@ -97,9 +97,9 @@ GET /result/86fac369-2aa3-4c8d-b15b-2a8ef31768f8
   "images": [
     {
       "filename": "86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
-      "url": "https://aiimg.598000.xyz/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
+      "url": "https://aiimg.example.com/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
       "local_path": "/data/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
-      "archive_url": "https://aiimgcdn.598000.xyz/archive/2026/01/02/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
+      "archive_url": "https://aiimgcdn.example.com/archive/2026/01/02/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
       "archive_status": "success",
       "archive_error": null
     }
@@ -120,7 +120,7 @@ GET /result/86fac369-2aa3-4c8d-b15b-2a8ef31768f8
 | ----------------- | ------ | ------------------------------------------------------ |
 | `COMFY_API`       | string | ComfyUI API 的地址。默认值：`http://host.docker.internal:8188` |
 | `OUTPUT_DIR`      | string | 生成图片的输出目录。默认值：`/data/outputs`                          |
-| `PUBLIC_BASE_URL` | string | 公网访问生成图像的基础URL。默认值：`https://aiimg.598000.xyz/outputs`  |  
+| `PUBLIC_BASE_URL` | string | 公网访问生成图像的基础URL。默认值：`https://aiimg.example.com/outputs`  |  
 这些环境变量可以通过 .env 文件配置，或者在 docker-compose.yml 中设置。
 
 ### 错误码总结  
