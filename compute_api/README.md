@@ -35,7 +35,6 @@ POST /generate
 
 ### 请求示例
 
-```json
 {
   "prompt": "Generate an image of a sunset over the ocean."
 }
