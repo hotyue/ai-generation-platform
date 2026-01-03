@@ -105,6 +105,21 @@ GET /result/86fac369-2aa3-4c8d-b15b-2a8ef31768f8
   ]  
 }  
 
+{
+  "status": "success",
+  "prompt_id": "86fac369-2aa3-4c8d-b15b-2a8ef31768f8",
+  "images": [
+    {
+      "filename": "86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
+      "url": "https://aiimg.598000.xyz/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
+      "local_path": "/data/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
+      "archive_url": "https://aiimgcdn.598000.xyz/archive/2026/01/02/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
+      "archive_status": "success",
+      "archive_error": null
+    }
+  ]
+}
+
 
 ### 错误响应  
 | 状态码 | 说明    | 错误描述         |
