@@ -90,20 +90,20 @@ GET /result/86fac369-2aa3-4c8d-b15b-2a8ef31768f8
 | base64         | string | （可选）图片的Base64编码字符串。                |
 
 ### 响应示例  
-{
-  "status": "success",
-  "prompt_id": "86fac369-2aa3-4c8d-b15b-2a8ef31768f8",
-  "images": [
-    {
-      "filename": "86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
-      "url": "https://aiimg.example.com/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
-      "local_path": "/data/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
-      "archive_url": "https://aiimgcdn.example.com/archive/2026/01/02/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",
-      "archive_status": "success",
-      "archive_error": null
-    }
-  ]
-}
+{  
+  "status": "success",  
+  "prompt_id": "86fac369-2aa3-4c8d-b15b-2a8ef31768f8",  
+  "images": [  
+    {  
+      "filename": "86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",  
+      "url": "https://aiimg.example.com/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",  
+      "local_path": "/data/outputs/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",  
+      "archive_url": "https://aiimgcdn.example.com/archive/2026/01/02/86fac369-2aa3-4c8d-b15b-2a8ef31768f8_00001_.png",  
+      "archive_status": "success",  
+      "archive_error": null  
+    }  
+  ]  
+}  
 
 
 ### 错误响应  
