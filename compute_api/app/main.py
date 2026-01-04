@@ -17,6 +17,9 @@ from datetime import datetime
 # ⚠️ 注意：保持原有导入方式不变
 from app.services.archive import upload_to_r2
 
+# ✅ 新增：事实事件上报（旁路，不影响主逻辑）
+from app.services.comfy_event_reporter import emit_event
+
 
 # -----------------------------------------
 # 初始化 FastAPI
@@ -146,6 +149,9 @@ def generate(req: PromptRequest):
         wf = build_workflow(req.prompt, business_id)
         queue_prompt(wf)
 
+        # ✅ 事实事件：任务已入队（queued）
+        emit_event(prompt_id=business_id, phase="queued")
+
         return {
             "msg": "任务已提交",
             "prompt_id": business_id
@@ -206,6 +212,9 @@ def get_result(prompt_id: str, b64: int = 0):
             ).start()
 
             results.append(item)
+
+        # ✅ 事实事件：任务已完成（finished）
+        emit_event(prompt_id=prompt_id, phase="finished")
 
         return {
             "status": "success",
