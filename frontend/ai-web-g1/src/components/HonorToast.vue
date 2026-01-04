@@ -3,7 +3,7 @@
     <div v-if="visible" class="honor-toast">
       <span class="text">
         🎉 恭喜您荣誉升到 {{ levelAfter }} 级，
-        获得系统奖励 {{ rewardQuota }} 点生成额度！
+        系统奖励 {{ rewardQuota }} 点额度！
       </span>
     </div>
   </transition>
