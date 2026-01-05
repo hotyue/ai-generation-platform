@@ -12,6 +12,7 @@ import os
 import glob
 import copy
 import threading
+import logging
 from datetime import datetime
 
 # ⚠️ 注意：保持原有导入方式不变
@@ -20,6 +21,8 @@ from app.services.archive import upload_to_r2
 # ✅ 原有：事实事件上报（compute-api → 平台）
 from app.services.comfy_event_reporter import emit_event
 
+
+logger = logging.getLogger(__name__)
 
 # =====================================================
 # 初始化 FastAPI
@@ -106,15 +109,29 @@ SAVE_NODE_ID = "9"
 # =====================================================
 class PromptRequest(BaseModel):
     prompt: str
-    task_id: str | None = None  # ✅ 平台传入则用；不传则兼容旧行为
+    task_id: str | None = None  # 平台传入则用；Swagger/旧调用兼容
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "prompt": "a cat sitting on the sofa",
+                "task_id": None,
+            }
+        }
+
+# =====================================================
+# 内存级 task_id → comfy_prompt_id 映射
+# （仅用于 finished 事件一致性，不写库）
+# =====================================================
+TASK_TO_COMFY: dict[str, str] = {}
 
 # =====================================================
 # 构建 workflow
 # =====================================================
-def build_workflow(prompt: str, prompt_id: str):
+def build_workflow(prompt: str, task_id: str):
     wf = copy.deepcopy(WORKFLOW)
     wf[PROMPT_NODE_ID]["inputs"]["text"] = prompt
-    wf[SAVE_NODE_ID]["inputs"]["filename_prefix"] = prompt_id
+    wf[SAVE_NODE_ID]["inputs"]["filename_prefix"] = task_id
     return wf
 
 # =====================================================
@@ -123,7 +140,7 @@ def build_workflow(prompt: str, prompt_id: str):
 def queue_prompt(wf):
     payload = {
         "prompt": wf,
-        "client_id": str(uuid.uuid4())
+        "client_id": str(uuid.uuid4()),
     }
 
     resp = requests.post(f"{COMFY_API}/prompt", json=payload, timeout=10)
@@ -137,10 +154,10 @@ def queue_prompt(wf):
     return comfy_prompt_id
 
 # =====================================================
-# 查找输出文件
+# 查找输出文件（按 task_id 前缀）
 # =====================================================
-def find_output_files(prompt_id: str):
-    pattern = os.path.join(OUTPUT_DIR, f"{prompt_id}*.png")
+def find_output_files(task_id: str):
+    pattern = os.path.join(OUTPUT_DIR, f"{task_id}*.png")
     return glob.glob(pattern)
 
 # =====================================================
@@ -158,82 +175,85 @@ def async_upload_to_r2(fp: str, filename: str):
     upload_to_r2(fp, object_key)
 
 # =====================================================
-# 下发任务（关键改造点）
+# 下发任务
 # =====================================================
 @app.post("/generate")
 def generate(req: PromptRequest):
     try:
-        # 平台业务主键（task_id）
+        # -------------------------------------------------
+        # task_id 裁决（Swagger 默认 "string" 过滤）
+        # -------------------------------------------------
         task_id = req.task_id
         if not task_id or task_id == "string":
+            if task_id == "string":
+                logger.warning(
+                    "[generate] swagger placeholder task_id detected, auto-regenerated"
+                )
             task_id = str(uuid.uuid4())
 
-        # workflow 文件名仍使用 task_id（不破坏既有逻辑）
+        # -------------------------------------------------
+        # 构建 workflow（文件名前缀 = task_id）
+        # -------------------------------------------------
         wf = build_workflow(req.prompt, task_id)
 
-        # 同步拿到 ComfyUI prompt_id
+        # -------------------------------------------------
+        # 提交到 ComfyUI
+        # -------------------------------------------------
         comfy_prompt_id = queue_prompt(wf)
 
-        # ===============================
-        # ✅ 事实事件 1：身份绑定（新增）
-        # ===============================
+        # 记录内存映射（用于 finished 事件）
+        TASK_TO_COMFY[task_id] = comfy_prompt_id
+
+        # -------------------------------------------------
+        # 事实事件：bind
+        # -------------------------------------------------
         emit_event(
             prompt_id=comfy_prompt_id,
             phase="bind",
-            payload={
-                "task_id": task_id
-            }
+            payload={"task_id": task_id},
         )
 
-        # ===============================
-        # ✅ 事实事件 2：平台视角 queued
-        # ===============================
+        # -------------------------------------------------
+        # 事实事件：queued
+        # -------------------------------------------------
         emit_event(
             prompt_id=comfy_prompt_id,
             phase="queued",
-            payload={
-                "task_id": task_id
-            }
+            payload={"task_id": task_id},
         )
 
         return {
             "msg": "任务已提交",
             "task_id": task_id,
-            "comfy_prompt_id": comfy_prompt_id
+            "comfy_prompt_id": comfy_prompt_id,
         }
 
     except Exception as e:
+        logger.exception("[generate] failed")
         return JSONResponse(
             status_code=500,
-            content={"detail": str(e)}
+            content={"detail": str(e)},
         )
 
 # =====================================================
-# 查询结果（平台轮询，完全不改）
+# 查询结果（平台轮询）
 # =====================================================
-@app.get("/result/{prompt_id}")
-def get_result(prompt_id: str, b64: int = 0):
+@app.get("/result/{task_id}")
+def get_result(task_id: str, b64: int = 0):
 
-    files = find_output_files(prompt_id)
+    files = find_output_files(task_id)
 
     if files:
         results = []
 
         for fp in files:
             filename = os.path.basename(fp)
-
             url = f"{PUBLIC_BASE_URL}/{filename}"
 
-            today = datetime.utcnow()
-            object_key = (
-                f"archive/"
-                f"{today.year:04d}/"
-                f"{today.month:02d}/"
-                f"{today.day:02d}/"
-                f"{filename}"
+            archive_url = upload_to_r2(
+                fp,
+                f"archive/{datetime.utcnow():%Y/%m/%d}/{filename}",
             )
-
-            archive_url = upload_to_r2(fp, object_key)
 
             item = {
                 "filename": filename,
@@ -251,23 +271,28 @@ def get_result(prompt_id: str, b64: int = 0):
             threading.Thread(
                 target=async_upload_to_r2,
                 args=(fp, filename),
-                daemon=True
+                daemon=True,
             ).start()
 
             results.append(item)
 
-        # ✅ 保留：完成事件
-        emit_event(prompt_id=prompt_id, phase="finished")
+        # -------------------------------------------------
+        # finished 事件：必须使用 comfy_prompt_id
+        # -------------------------------------------------
+        comfy_id = TASK_TO_COMFY.get(task_id, task_id)
+        emit_event(prompt_id=comfy_id, phase="finished")
 
         return {
             "status": "success",
-            "prompt_id": prompt_id,
-            "images": results
+            "task_id": task_id,
+            "images": results,
         }
 
-    # pending（原样保留）
+    # -------------------------------------------------
+    # pending：回退查 ComfyUI history
+    # -------------------------------------------------
     try:
-        hist_resp = requests.get(f"{COMFY_API}/history/{prompt_id}", timeout=5)
+        hist_resp = requests.get(f"{COMFY_API}/history/{task_id}", timeout=5)
     except Exception:
         return {"status": "pending", "msg": "任务未开始或不存在"}
 
