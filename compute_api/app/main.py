@@ -106,6 +106,7 @@ SAVE_NODE_ID = "9"
 # =====================================================
 class PromptRequest(BaseModel):
     prompt: str
+    task_id: str | None = None  # ✅ 平台传入则用；不传则兼容旧行为
 
 # =====================================================
 # 构建 workflow
@@ -163,7 +164,7 @@ def async_upload_to_r2(fp: str, filename: str):
 def generate(req: PromptRequest):
     try:
         # 平台业务主键（task_id）
-        task_id = str(uuid.uuid4())
+        task_id = req.task_id or str(uuid.uuid4())
 
         # workflow 文件名仍使用 task_id（不破坏既有逻辑）
         wf = build_workflow(req.prompt, task_id)
