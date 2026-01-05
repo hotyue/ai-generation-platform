@@ -8,7 +8,7 @@ from backend.app.schemas._utc_base import UTCModel
 
 class HistoryItem(UTCModel):
     id: int
-    task_id: str
+    task_id: Optional[str] = None
     prompt: str
     image_url: Optional[str]
     """
