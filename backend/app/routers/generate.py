@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+import uuid
 
 from backend.app.database import get_db
 from backend.app.models.history import History
@@ -32,9 +33,10 @@ def generate_for_user(
         raise HTTPException(status_code=400, detail="生成次数不足，请充值")
 
     # 2️⃣ 先创建 history（pending）
+    platform_task_id = str(uuid.uuid4())
     history = History(
         user_id=current_user.id,
-        task_id=None,
+        task_id=platform_task_id,
         prompt=req.prompt,
         image_url=None,
         status="pending",
@@ -73,8 +75,8 @@ def generate_for_user(
         pass
 
     # 6️⃣ 调用 ComfyUI（外部系统）
-    result = call_generate(req.prompt)
-    if not result or "prompt_id" not in result:
+    result = call_generate(req.prompt, task_id=platform_task_id)
+    if not result or "comfy_prompt_id" not in result:
         # v1：不回滚 quota，只记录失败（后续可补偿）
         history.status = "failed"
         db.add(history)
@@ -83,11 +85,6 @@ def generate_for_user(
 
         raise HTTPException(status_code=500, detail="生成任务提交失败")
 
-    # 7️⃣ 回填 task_id
-    history.task_id = result["prompt_id"]
-    db.add(history)
-    db.commit()
-    db.refresh(history)
 
     return {
         "msg": "Task submitted",
