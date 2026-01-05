@@ -38,20 +38,16 @@ app.add_middleware(
 # 配置区域（v1.0.31 冻结裁决）
 # =====================================================
 
-# ComfyUI API（必须由环境变量提供）
 COMFY_API = os.getenv("COMFY_API")
 if not COMFY_API:
     raise RuntimeError("COMFY_API is required")
 
-# 输出目录（Docker / 宿主统一语义）
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/data/outputs")
 
-# image_url 统一由环境变量决定（语义冻结）
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL")
 if not PUBLIC_BASE_URL:
     raise RuntimeError("PUBLIC_BASE_URL is required")
 
-# 平台事件接收端点（compute-api → 平台）
 PLATFORM_EVENT_ENDPOINT = os.getenv("PLATFORM_EVENT_ENDPOINT", "")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -59,37 +55,26 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # =====================================================
 # 静态文件服务
 # =====================================================
-
-# ⚠️ 说明：
-# Docker + Nginx 场景下，/outputs 实际由 nginx 提供
-# 这里保留 mount 仅用于：
-# 1) Windows 直跑
-# 2) 调试兜底
 app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
 
-# web：仅在 Windows 本地调试存在
 WEB_DIR = os.getenv("WEB_DIR", "")
 if WEB_DIR and os.path.isdir(WEB_DIR):
     app.mount("/web", StaticFiles(directory=WEB_DIR), name="web")
 
 # =====================================================
-# ComfyUI 事实事件接收与转发（关键新增）
+# ComfyUI → compute-api → 平台（只接、只转）
 # =====================================================
-
 @app.post("/internal/comfy/event")
 async def recv_comfy_event(event: dict):
     """
     接收来自 ComfyUI 的事实事件（queued / running / finished）
 
-    严格原则：
-    - 只接收
-    - 只转发
+    原则：
+    - 不改内容
     - 不写库
     - 不裁决
-    - 不影响任何原有逻辑
+    - 不影响原逻辑
     """
-
-    # 未配置平台端点 → 直接吞（本地 / 调试）
     if not PLATFORM_EVENT_ENDPOINT:
         return {"ok": True}
 
@@ -100,7 +85,6 @@ async def recv_comfy_event(event: dict):
             timeout=2,
         )
     except Exception:
-        # 事实事件失败 ≠ 任务失败
         pass
 
     return {"ok": True}
@@ -133,7 +117,7 @@ def build_workflow(prompt: str, prompt_id: str):
     return wf
 
 # =====================================================
-# 提交任务到 ComfyUI
+# 提交任务到 ComfyUI（返回 comfy_prompt_id）
 # =====================================================
 def queue_prompt(wf):
     payload = {
@@ -145,7 +129,11 @@ def queue_prompt(wf):
     if resp.status_code != 200:
         raise RuntimeError(f"提交任务失败 {resp.status_code}: {resp.text}")
 
-    return resp.json().get("prompt_id")
+    comfy_prompt_id = resp.json().get("prompt_id")
+    if not comfy_prompt_id:
+        raise RuntimeError("ComfyUI 未返回 prompt_id")
+
+    return comfy_prompt_id
 
 # =====================================================
 # 查找输出文件
@@ -169,21 +157,46 @@ def async_upload_to_r2(fp: str, filename: str):
     upload_to_r2(fp, object_key)
 
 # =====================================================
-# 下发任务
+# 下发任务（关键改造点）
 # =====================================================
 @app.post("/generate")
 def generate(req: PromptRequest):
     try:
-        business_id = str(uuid.uuid4())
-        wf = build_workflow(req.prompt, business_id)
-        queue_prompt(wf)
+        # 平台业务主键（task_id）
+        task_id = str(uuid.uuid4())
 
-        # ✅ 事实事件：任务已入队（compute-api → 平台）
-        emit_event(prompt_id=business_id, phase="queued")
+        # workflow 文件名仍使用 task_id（不破坏既有逻辑）
+        wf = build_workflow(req.prompt, task_id)
+
+        # 同步拿到 ComfyUI prompt_id
+        comfy_prompt_id = queue_prompt(wf)
+
+        # ===============================
+        # ✅ 事实事件 1：身份绑定（新增）
+        # ===============================
+        emit_event(
+            prompt_id=comfy_prompt_id,
+            phase="bind",
+            payload={
+                "task_id": task_id
+            }
+        )
+
+        # ===============================
+        # ✅ 事实事件 2：平台视角 queued
+        # ===============================
+        emit_event(
+            prompt_id=comfy_prompt_id,
+            phase="queued",
+            payload={
+                "task_id": task_id
+            }
+        )
 
         return {
             "msg": "任务已提交",
-            "prompt_id": business_id
+            "task_id": task_id,
+            "comfy_prompt_id": comfy_prompt_id
         }
 
     except Exception as e:
@@ -193,7 +206,7 @@ def generate(req: PromptRequest):
         )
 
 # =====================================================
-# 查询结果（平台轮询）
+# 查询结果（平台轮询，完全不改）
 # =====================================================
 @app.get("/result/{prompt_id}")
 def get_result(prompt_id: str, b64: int = 0):
@@ -206,7 +219,6 @@ def get_result(prompt_id: str, b64: int = 0):
         for fp in files:
             filename = os.path.basename(fp)
 
-            # image_url（语义冻结）
             url = f"{PUBLIC_BASE_URL}/{filename}"
 
             today = datetime.utcnow()
@@ -241,7 +253,7 @@ def get_result(prompt_id: str, b64: int = 0):
 
             results.append(item)
 
-        # ✅ 事实事件：任务已完成（compute-api → 平台）
+        # ✅ 保留：完成事件
         emit_event(prompt_id=prompt_id, phase="finished")
 
         return {
@@ -250,9 +262,7 @@ def get_result(prompt_id: str, b64: int = 0):
             "images": results
         }
 
-    # ---------------------------------
-    # pending（保持原语义）
-    # ---------------------------------
+    # pending（原样保留）
     try:
         hist_resp = requests.get(f"{COMFY_API}/history/{prompt_id}", timeout=5)
     except Exception:
