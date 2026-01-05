@@ -12,6 +12,9 @@ class History(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     task_id = Column(String(100), index=True, nullable=False)
+    # ✅ ComfyUI prompt_id（算力侧生成标识）
+    # ⚠️ 新增字段
+    comfy_prompt_id = Column(String(100), index=True, nullable=True)
 
     prompt = Column(String(500), nullable=False)
 
