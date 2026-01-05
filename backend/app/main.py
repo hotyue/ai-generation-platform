@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.app.routers import task, generate, history, auth, admin, plan, quota, ws
+from backend.app.routers.internal import comfy_event   # ✅ 新增：平台侧算力事实接口
 from backend.app.middlewares.account_status import AccountStatusMiddleware  # v1.0.10
 
 # =========================
@@ -84,6 +85,11 @@ app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(admin.router, prefix=API_PREFIX)
 app.include_router(plan.router, prefix=API_PREFIX)
 app.include_router(quota.router, prefix=API_PREFIX)
+
+# =========================
+# 🔐 Internal · 算力事实事件接入（v1.0.32）
+# =========================
+app.include_router(comfy_event.router)   # ✅ 不加 API_PREFIX
 
 # =========================
 # ✅ WebSocket 路由
