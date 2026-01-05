@@ -17,13 +17,13 @@ from datetime import datetime
 # ⚠️ 注意：保持原有导入方式不变
 from app.services.archive import upload_to_r2
 
-# ✅ 新增：事实事件上报（旁路，不影响主逻辑）
+# ✅ 原有：事实事件上报（compute-api → 平台）
 from app.services.comfy_event_reporter import emit_event
 
 
-# -----------------------------------------
+# =====================================================
 # 初始化 FastAPI
-# -----------------------------------------
+# =====================================================
 app = FastAPI()
 
 app.add_middleware(
@@ -34,9 +34,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -----------------------------------------
+# =====================================================
 # 配置区域（v1.0.31 冻结裁决）
-# -----------------------------------------
+# =====================================================
 
 # ComfyUI API（必须由环境变量提供）
 COMFY_API = os.getenv("COMFY_API")
@@ -51,11 +51,14 @@ PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL")
 if not PUBLIC_BASE_URL:
     raise RuntimeError("PUBLIC_BASE_URL is required")
 
+# 平台事件接收端点（compute-api → 平台）
+PLATFORM_EVENT_ENDPOINT = os.getenv("PLATFORM_EVENT_ENDPOINT", "")
+
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# -----------------------------------------
+# =====================================================
 # 静态文件服务
-# -----------------------------------------
+# =====================================================
 
 # ⚠️ 说明：
 # Docker + Nginx 场景下，/outputs 实际由 nginx 提供
@@ -69,10 +72,42 @@ WEB_DIR = os.getenv("WEB_DIR", "")
 if WEB_DIR and os.path.isdir(WEB_DIR):
     app.mount("/web", StaticFiles(directory=WEB_DIR), name="web")
 
+# =====================================================
+# ComfyUI 事实事件接收与转发（关键新增）
+# =====================================================
 
-# -----------------------------------------
+@app.post("/internal/comfy/event")
+async def recv_comfy_event(event: dict):
+    """
+    接收来自 ComfyUI 的事实事件（queued / running / finished）
+
+    严格原则：
+    - 只接收
+    - 只转发
+    - 不写库
+    - 不裁决
+    - 不影响任何原有逻辑
+    """
+
+    # 未配置平台端点 → 直接吞（本地 / 调试）
+    if not PLATFORM_EVENT_ENDPOINT:
+        return {"ok": True}
+
+    try:
+        requests.post(
+            PLATFORM_EVENT_ENDPOINT,
+            json=event,
+            timeout=2,
+        )
+    except Exception:
+        # 事实事件失败 ≠ 任务失败
+        pass
+
+    return {"ok": True}
+
+# =====================================================
 # 加载 workflow.json
-# -----------------------------------------
+# =====================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKFLOW_PATH = os.path.join(BASE_DIR, "workflows", "workflow.json")
 
@@ -82,27 +117,24 @@ with open(WORKFLOW_PATH, "r", encoding="utf-8") as f:
 PROMPT_NODE_ID = "45"
 SAVE_NODE_ID = "9"
 
-
-# -----------------------------------------
+# =====================================================
 # 请求模型
-# -----------------------------------------
+# =====================================================
 class PromptRequest(BaseModel):
     prompt: str
 
-
-# -----------------------------------------
+# =====================================================
 # 构建 workflow
-# -----------------------------------------
+# =====================================================
 def build_workflow(prompt: str, prompt_id: str):
     wf = copy.deepcopy(WORKFLOW)
     wf[PROMPT_NODE_ID]["inputs"]["text"] = prompt
     wf[SAVE_NODE_ID]["inputs"]["filename_prefix"] = prompt_id
     return wf
 
-
-# -----------------------------------------
+# =====================================================
 # 提交任务到 ComfyUI
-# -----------------------------------------
+# =====================================================
 def queue_prompt(wf):
     payload = {
         "prompt": wf,
@@ -115,18 +147,16 @@ def queue_prompt(wf):
 
     return resp.json().get("prompt_id")
 
-
-# -----------------------------------------
+# =====================================================
 # 查找输出文件
-# -----------------------------------------
+# =====================================================
 def find_output_files(prompt_id: str):
     pattern = os.path.join(OUTPUT_DIR, f"{prompt_id}*.png")
     return glob.glob(pattern)
 
-
-# -----------------------------------------
+# =====================================================
 # Cloudflare R2 异步上传
-# -----------------------------------------
+# =====================================================
 def async_upload_to_r2(fp: str, filename: str):
     today = datetime.utcnow()
     object_key = (
@@ -138,10 +168,9 @@ def async_upload_to_r2(fp: str, filename: str):
     )
     upload_to_r2(fp, object_key)
 
-
-# -----------------------------------------
+# =====================================================
 # 下发任务
-# -----------------------------------------
+# =====================================================
 @app.post("/generate")
 def generate(req: PromptRequest):
     try:
@@ -149,7 +178,7 @@ def generate(req: PromptRequest):
         wf = build_workflow(req.prompt, business_id)
         queue_prompt(wf)
 
-        # ✅ 事实事件：任务已入队（queued）
+        # ✅ 事实事件：任务已入队（compute-api → 平台）
         emit_event(prompt_id=business_id, phase="queued")
 
         return {
@@ -163,10 +192,9 @@ def generate(req: PromptRequest):
             content={"detail": str(e)}
         )
 
-
-# -----------------------------------------
+# =====================================================
 # 查询结果（平台轮询）
-# -----------------------------------------
+# =====================================================
 @app.get("/result/{prompt_id}")
 def get_result(prompt_id: str, b64: int = 0):
 
@@ -213,7 +241,7 @@ def get_result(prompt_id: str, b64: int = 0):
 
             results.append(item)
 
-        # ✅ 事实事件：任务已完成（finished）
+        # ✅ 事实事件：任务已完成（compute-api → 平台）
         emit_event(prompt_id=prompt_id, phase="finished")
 
         return {
