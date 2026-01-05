@@ -19,9 +19,14 @@ def _force_https(url: str) -> str:
     return url
 
 
-def call_generate(prompt: str):
+def call_generate(prompt: str, task_id: str | None = None):
     url = f"{COMFY_API_BASE}/generate"
-    resp = requests.post(url, json={"prompt": prompt})
+
+    payload = {"prompt": prompt}
+    if task_id:
+        payload["task_id"] = task_id
+        
+    resp = requests.post(url, json=payload, timeout=10)
     resp.raise_for_status()
     return resp.json()
 
