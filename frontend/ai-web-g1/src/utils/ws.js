@@ -1,14 +1,11 @@
-import { useAccountStatusStore } from '@/stores/accountStatus'
-import { useAuthStore } from '@/stores/auth'
-import { useHonorStore } from '@/stores/honor'
 import router from '@/router'
+import { routeWsMessage } from '@/utils/ws_router'
 
 let ws = null
 let currentToken = null
 let pendingTimer = null
-let wsSessionReady = false
 
-// ⭐ 登录页挂起机制
+// 登录页挂起机制
 let pendingToken = null
 let hasRouteHook = false
 
@@ -58,31 +55,23 @@ export function startAccountStatusWS(token) {
 
   const path = router.currentRoute.value.path
 
-  /**
-   * 登录 / 注册页 → 挂起，等待离开再启动
-   */
+  // 登录 / 注册页 → 挂起，等待离开再启动
   if (isGuestPath(path)) {
     pendingToken = token
     ensureRouteHook()
     return
   }
 
-  /**
-   * token 未变化且 ws 已存在 → 不重复建立
-   */
+  // token 未变化且 ws 已存在 → 不重复建立
   if (ws && currentToken === token) {
     return
   }
 
-  /**
-   * token 变化 / 残留 ws → 强制清理
-   */
+  // token 变化 / 残留 ws → 强制清理
   stopAccountStatusWS()
   currentToken = token
 
-  /**
-   * 防抖：避免切页抖动
-   */
+  // 防抖：避免切页抖动
   if (pendingTimer) {
     clearTimeout(pendingTimer)
     pendingTimer = null
@@ -98,115 +87,26 @@ export function startAccountStatusWS(token) {
       return
     }
 
-    const accountStatusStore = useAccountStatusStore()
-    const authStore = useAuthStore()
-    const honorStore = useHonorStore()
-
     const wsBaseUrl = getWsBaseUrl()
     const url = `${wsBaseUrl}/ws?token=${token}`
 
     const localWs = new WebSocket(url)
     ws = localWs
 
+    /**
+     * =========================
+     * WS 消息入口（只做路由转发）
+     * =========================
+     */
     localWs.onmessage = (event) => {
       // 防止旧 ws 污染
       if (localWs !== ws) return
 
       try {
         const msg = JSON.parse(event.data)
-        const { event_type, payload } = msg || {}
-        if (!event_type) return
-
-        /**
-         * =========================
-         * system-level WS events
-         * =========================
-         */
-        if (event_type === 'SYSTEM_WS_READY') {
-          wsSessionReady = true
-          return
-        }
-
-        if (event_type === 'SYSTEM_WS_CLOSED') {
-          wsSessionReady = false
-          return
-        }
-
-        /**
-         * =========================
-         * account_status（v1.0.17）
-         * =========================
-         */
-        if (event_type === 'ACCOUNT_STATUS_UPDATED') {
-          const status = payload?.account_status
-          if (typeof status === 'string') {
-            accountStatusStore.setStatus(status)
-          }
-          return
-        }
-
-        /**
-         * =========================
-         * quota（v1.0.16+ · WS 主同步）
-         * =========================
-         */
-        if (event_type === 'USER_QUOTA_UPDATED') {
-          const balance = payload?.balance
-          if (typeof balance === 'number') {
-            authStore.setQuota(balance)
-          }
-          return
-        }
-
-        /**
-         * =========================
-         * honor system（v1.0.30 · 保留 + 扩展）
-         * =========================
-         */
-        if (event_type === 'HONOR_LEVEL_UP') {
-          /**
-           * 1️⃣ Profile 页即时更新（原有逻辑，保持）
-           */
-          const after = payload?.after
-          if (after && typeof after === 'object') {
-            honorStore.setHonor({
-              star: Number(after.star ?? 0),
-              moon: Number(after.moon ?? 0),
-              sun: Number(after.sun ?? 0),
-              diamond: Number(after.diamond ?? 0),
-              crown: Number(after.crown ?? 0),
-              total_success_tasks: Number(
-                payload?.after_total_success_tasks ?? 0
-              ),
-            })
-          }
-
-          /**
-           * 2️⃣ 冗余余额同步（与 USER_QUOTA_UPDATED 等价）
-           */
-          const balance = payload?.balance
-          if (typeof balance === 'number') {
-            authStore.setQuota(balance)
-          }
-
-          /**
-           * 3️⃣ ⭐ 新增：全局一次性祝贺事件（5 秒滚动条用）
-           * - 不进 store
-           * - 不持久
-           * - 不影响现有页面逻辑
-           */
-          window.dispatchEvent(
-            new CustomEvent('HONOR_LEVEL_UP', {
-              detail: payload,
-            })
-          )
-
-          return
-        }
-
-        // 其他事件：忽略
+        routeWsMessage(msg)
       } catch {
-        // 非法消息忽略
+        // 非法消息直接忽略
       }
     }
 
@@ -214,7 +114,6 @@ export function startAccountStatusWS(token) {
       if (localWs === ws) {
         ws = null
         currentToken = null
-        wsSessionReady = false
       }
     }
 
@@ -222,7 +121,6 @@ export function startAccountStatusWS(token) {
       if (localWs === ws) {
         ws = null
         currentToken = null
-        wsSessionReady = false
       }
     }
   }, 50)
@@ -254,11 +152,6 @@ export function stopAccountStatusWS() {
  * =========================
  */
 export function forceLogout() {
-  const authStore = useAuthStore()
-  const accountStatusStore = useAccountStatusStore()
-
-  authStore.logout()
-  accountStatusStore.reset()
   stopAccountStatusWS()
 
   if (router.currentRoute.value.path !== '/login') {
