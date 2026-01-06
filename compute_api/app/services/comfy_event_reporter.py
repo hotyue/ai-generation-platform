@@ -5,11 +5,10 @@ import logging
 import requests
 
 # ===== 基础配置（只读，不强依赖） =====
-
-PLATFORM_EVENT_ENDPOINT = os.getenv(
-    "PLATFORM_EVENT_ENDPOINT",
-    ""
-)
+# 支持多个后端端点
+PLATFORM_EVENT_ENDPOINTS = os.getenv(
+    "PLATFORM_EVENT_ENDPOINTS",
+    "").split(",")  # 支持逗号分隔的多个端点
 
 COMPUTE_NODE = os.getenv(
     "COMPUTE_NODE",
@@ -30,7 +29,6 @@ def emit_event(prompt_id: str, phase: str, payload: dict | None = None):
     - 绝不阻塞主线程
     - 失败即吞
     """
-
     event = {
         "source": "comfyui",
         "compute_node": COMPUTE_NODE,
@@ -48,15 +46,15 @@ def emit_event(prompt_id: str, phase: str, payload: dict | None = None):
         pass
 
     # 未配置平台端点则只记本地事实
-    if not PLATFORM_EVENT_ENDPOINT:
+    if not PLATFORM_EVENT_ENDPOINTS:
         logging.info(f"[event] {event}")
         return
 
     # 后台线程发送，避免阻塞
-    def _post():
+    def _post(endpoint):
         try:
             requests.post(
-                PLATFORM_EVENT_ENDPOINT,
+                endpoint,
                 json=event,
                 timeout=1.5,
             )
@@ -64,7 +62,8 @@ def emit_event(prompt_id: str, phase: str, payload: dict | None = None):
             pass
 
     try:
-        threading.Thread(target=_post, daemon=True).start()
+        for endpoint in PLATFORM_EVENT_ENDPOINTS:
+            threading.Thread(target=_post, args=(endpoint,), daemon=True).start()
     except Exception:
         pass
 
