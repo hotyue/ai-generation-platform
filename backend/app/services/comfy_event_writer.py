@@ -1,6 +1,7 @@
 import logging
 from sqlalchemy import text
 from backend.app.database import SessionLocal
+from backend.app.ws.decision_state import update_current_decision
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ def handle_comfy_event(event: dict):
 
     db = SessionLocal()
     try:
-        if phase == "bind":
+        if phase in ("bind", "queued"):
             _handle_bind(db, event, payload, ts)
         elif phase == "running":
             _handle_running(db, prompt_id, ts)
@@ -32,6 +33,21 @@ def handle_comfy_event(event: dict):
             logger.warning("unknown comfy event phase: %s", phase)
 
         db.commit()
+
+        # STEP 3：裁决重算（不推送 WS）
+        try:
+            decision = compute_ws_decision(db)
+            changed = update_current_decision(decision)
+            logger.debug(
+                "ws decision recomputed after commit: X=%s Y=%s Z=%s",
+                decision["X"],
+                decision["Y"],
+                decision["Z"],
+                changed,
+            )
+        except Exception:
+            # 裁决失败不得影响事实写库
+            logger.exception("failed to recompute ws decision")
 
     except Exception:
         db.rollback()
@@ -92,3 +108,52 @@ def _handle_finished(db, prompt_id, payload, ts):
             "ts": ts,
         },
     )
+
+def compute_ws_decision(db, recent_n: int = 10):
+    """
+    WS 裁决计算（v1.0.32 冻结语义）
+
+    X: 当前未完成任务数（finished_at IS NULL）
+    Y: 最近 N 条已完成任务的平均执行耗时（秒）
+    Z: 预计完成时间（秒） = (X + 1) * Y
+
+    约束：
+    - 只读 DB
+    - 不裁剪任务
+    - 不依赖前端
+    """
+
+    # X：未完成任务数（命中 idx_ctm_unfinished）
+    x = db.execute(
+        text("""
+        SELECT COUNT(*)
+        FROM compute_task_mappings
+        WHERE finished_at IS NULL
+        """)
+    ).scalar() or 0
+
+    # Y：最近 N 条完成任务的平均执行耗时（命中 idx_ctm_finished_at_desc）
+    y = db.execute(
+        text("""
+        SELECT AVG(EXTRACT(EPOCH FROM (finished_at - started_at)))
+        FROM (
+            SELECT started_at, finished_at
+            FROM compute_task_mappings
+            WHERE finished_at IS NOT NULL
+            ORDER BY finished_at DESC
+            LIMIT :recent_n
+        ) t
+        """),
+        {"recent_n": recent_n},
+    ).scalar()
+
+    y = float(y) if y is not None else 0.0
+
+    # Z：冻结公式
+    z = (x + 1) * y
+
+    return {
+        "X": x,
+        "Y": y,
+        "Z": z,
+    }
