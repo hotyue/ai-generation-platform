@@ -109,6 +109,11 @@ def _handle_finished(db, prompt_id, payload, ts):
         },
     )
 
+# 小数位治理函数    
+def _round_1(val: float) -> float:
+    return round(val, 1)
+
+
 def compute_ws_decision(db, recent_n: int = 10):
     """
     WS 裁决计算（v1.0.32 冻结语义）
@@ -148,9 +153,12 @@ def compute_ws_decision(db, recent_n: int = 10):
     ).scalar()
 
     y = float(y) if y is not None else 0.0
+    y = _round_1(y)
 
     # Z：冻结公式
-    z = (x + 1) * y
+    # z = (x + 1) * y
+    z = x * y
+    z = _round_1(z)
 
     return {
         "X": x,
