@@ -11,6 +11,18 @@
 
     <template v-else>
       <!-- =========================
+           WS 任务调度信息（裁决展示）
+      ========================= -->
+      <div
+        v-if="wsDecision.X !== null"
+        class="schedule-box"
+      >
+        <p>前方排队任务数：<strong>{{ wsDecision.X }}</strong></p>
+        <p>平均执行耗时：<strong>{{ wsDecision.Y }} 秒</strong></p>
+        <p>预计完成时间：<strong>{{ wsDecision.Z }} 秒</strong></p>
+      </div>
+
+      <!-- =========================
            输入框
       ========================= -->
       <textarea
@@ -106,8 +118,6 @@ const userLoading = computed(() => {
 /**
  * =========================
  * account_status（v1.0.11 修正版）
- * - WS 为唯一事实源（accountStatusStore）
- * - 首次进入/极短时间 WS 未就绪：回退到 /me 的 accountStatus
  * =========================
  */
 const accountStatus = computed(() => {
@@ -115,6 +125,52 @@ const accountStatus = computed(() => {
     ? accountStatusStore.status
     : (authStore.user?.account_status ?? 'normal')
 })
+
+/**
+ * =========================
+ * WS 系统裁决状态（X / Y / Z）
+ * - 唯一来源：localStorage
+ * - 只读、不裁决
+ * =========================
+ */
+const wsDecision = ref({
+  X: null,
+  Y: null,
+  Z: null,
+})
+
+const loadWsDecisionFromCache = () => {
+  try {
+    const raw = localStorage.getItem('ws_decision_xyz')
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+    if (
+      typeof parsed?.X === 'number' &&
+      typeof parsed?.Y === 'number' &&
+      typeof parsed?.Z === 'number'
+    ) {
+      wsDecision.value = parsed
+    }
+  } catch {
+    // 忽略非法缓存
+  }
+}
+
+const onStorage = (e) => {
+  if (e.key !== 'ws_decision_xyz') return
+  loadWsDecisionFromCache()
+}
+
+const onWsDecisionUpdated = () => {
+  loadWsDecisionFromCache()
+}
+
+
+// 首次加载
+loadWsDecisionFromCache()
+
+window.addEventListener('storage', onStorage)
+window.addEventListener('WS_DECISION_UPDATED', onWsDecisionUpdated)
 
 /**
  * =========================
@@ -167,10 +223,7 @@ const statusText = computed(() => {
 
 /**
  * =========================
- * v1.0.11 行为修正：
- * - 一旦账号不再 normal
- *   - 立即停止轮询
- *   - 清理“生成中”态，避免页面持续卡在 pending
+ * account_status 变化联动
  * =========================
  */
 watch(
@@ -178,7 +231,6 @@ watch(
   (val) => {
     if (val !== 'normal') {
       stopPolling()
-      // 如果正在 pending，改为中止态（不引入新语义，只清掉 pending）
       if (status.value === 'pending') {
         status.value = ''
       }
@@ -230,7 +282,6 @@ const startPolling = () => {
   stopPolling()
 
   timer = setInterval(async () => {
-    // 账号非 normal 时，不再轮询（避免无意义请求与 UI 僵态）
     if (accountStatus.value !== 'normal') {
       stopPolling()
       return
@@ -267,14 +318,14 @@ const stopPolling = () => {
   }
 }
 
-onUnmounted(stopPolling)
+onUnmounted(() => {
+  stopPolling()
+  window.removeEventListener('storage', onStorage)
+  window.removeEventListener('WS_DECISION_UPDATED', onWsDecisionUpdated)
+})
 </script>
 
 <style scoped>
-/* =========================
- * 页面容器
- * ========================= */
-
 .generate-page {
   max-width: 720px;
   margin: 0 auto;
@@ -285,23 +336,23 @@ onUnmounted(stopPolling)
   color: var(--text-primary);
 }
 
-/* =========================
- * 加载提示
- * ========================= */
-
 .loading {
   color: var(--text-secondary);
 }
 
-/* =========================
- * 输入框
- * ========================= */
+.schedule-box {
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--bg-muted);
+  border: 1px dashed var(--border-base);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
 
 .textarea {
   min-height: 120px;
   padding: 12px;
   font-size: 14px;
-
   background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border-base);
@@ -316,14 +367,9 @@ onUnmounted(stopPolling)
   opacity: 0.6;
 }
 
-/* =========================
- * 按钮
- * ========================= */
-
 .btn {
   padding: 10px;
   font-size: 16px;
-
   border-radius: 6px;
   border: 1px solid var(--border-base);
   background: var(--bg-card);
@@ -335,10 +381,6 @@ onUnmounted(stopPolling)
   cursor: not-allowed;
 }
 
-/* =========================
- * 状态提示
- * ========================= */
-
 .warn {
   color: var(--state-warning);
 }
@@ -347,22 +389,13 @@ onUnmounted(stopPolling)
   color: var(--state-danger);
 }
 
-/* =========================
- * 任务状态盒子
- * ========================= */
-
 .task-box {
   padding: 12px;
   border-radius: 6px;
-
   background: var(--bg-muted);
   border: 1px solid var(--border-base);
   color: var(--text-primary);
 }
-
-/* =========================
- * 图片展示
- * ========================= */
 
 .image-box img {
   max-width: 100%;
