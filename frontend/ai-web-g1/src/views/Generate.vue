@@ -17,9 +17,12 @@
         v-if="wsDecision.X !== null"
         class="schedule-box"
       >
-        <p>前方排队任务数：<strong>{{ wsDecision.X }}</strong></p>
+        <p>当前排队任务数：<strong>{{ wsDecision.X }}</strong></p>
         <p>平均执行耗时：<strong>{{ wsDecision.Y }} 秒</strong></p>
-        <p>预计完成时间：<strong>{{ wsDecision.Z }} 秒</strong></p>
+        <p>
+          预计完成时间：
+          <strong>{{ displayZ !== null ? displayZ : wsDecision.Z }} 秒</strong>
+        </p>
       </div>
 
       <!-- =========================
@@ -44,7 +47,6 @@
         <span v-else>开始生成</span>
       </button>
 
-      <!-- 不可生成态：无 click -->
       <button
         v-else
         class="btn"
@@ -117,7 +119,7 @@ const userLoading = computed(() => {
 
 /**
  * =========================
- * account_status（v1.0.11 修正版）
+ * account_status
  * =========================
  */
 const accountStatus = computed(() => {
@@ -128,9 +130,7 @@ const accountStatus = computed(() => {
 
 /**
  * =========================
- * WS 系统裁决状态（X / Y / Z）
- * - 唯一来源：localStorage
- * - 只读、不裁决
+ * WS 裁决状态（静态事实）
  * =========================
  */
 const wsDecision = ref({
@@ -139,11 +139,65 @@ const wsDecision = ref({
   Z: null,
 })
 
+/**
+ * =========================
+ * Z 运行期缓存 Key
+ * =========================
+ */
+const Z_RUNTIME_KEY = 'ws_decision_z_runtime'
+
+/**
+ * =========================
+ * 动态展示 Z（递减）
+ * =========================
+ */
+const displayZ = ref(null)
+let zTimer = null
+
+const restoreZFromRuntime = () => {
+  try {
+    const raw = localStorage.getItem(Z_RUNTIME_KEY)
+    if (!raw) return
+
+    const { baseZ, ts } = JSON.parse(raw)
+    if (typeof baseZ !== 'number' || typeof ts !== 'number') return
+
+    const elapsed = Math.floor((Date.now() - ts) / 1000)
+    const remain = Math.max(0, Math.floor(baseZ - elapsed))
+
+    displayZ.value = remain
+
+    if (zTimer) {
+      clearInterval(zTimer)
+      zTimer = null
+    }
+
+    if (remain <= 0) return
+
+    zTimer = setInterval(() => {
+      if (displayZ.value > 0) {
+        displayZ.value -= 1
+      } else {
+        clearInterval(zTimer)
+        zTimer = null
+      }
+    }, 1000)
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * =========================
+ * 仅加载 WS 静态事实（不写 runtime）
+ * =========================
+ */
 const loadWsDecisionFromCache = () => {
   try {
     const raw = localStorage.getItem('ws_decision_xyz')
     if (!raw) return
     const parsed = JSON.parse(raw)
+
     if (
       typeof parsed?.X === 'number' &&
       typeof parsed?.Y === 'number' &&
@@ -152,22 +206,66 @@ const loadWsDecisionFromCache = () => {
       wsDecision.value = parsed
     }
   } catch {
-    // 忽略非法缓存
+    // ignore
   }
 }
 
+/**
+ * =========================
+ * 新 WS 裁决到来（唯一允许重置 Z 的地方）
+ * =========================
+ */
+const applyNewWsDecision = () => {
+  try {
+    const raw = localStorage.getItem('ws_decision_xyz')
+    if (!raw) return
+    const parsed = JSON.parse(raw)
+
+    if (
+      typeof parsed?.X === 'number' &&
+      typeof parsed?.Y === 'number' &&
+      typeof parsed?.Z === 'number'
+    ) {
+      wsDecision.value = parsed
+
+      localStorage.setItem(
+        Z_RUNTIME_KEY,
+        JSON.stringify({
+          baseZ: parsed.Z,
+          ts: Date.now(),
+        })
+      )
+
+      restoreZFromRuntime()
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * =========================
+ * 初始化（顺序极其重要）
+ * =========================
+ */
+restoreZFromRuntime()
+loadWsDecisionFromCache()
+
+/**
+ * =========================
+ * 事件监听
+ * =========================
+ */
 const onStorage = (e) => {
-  if (e.key !== 'ws_decision_xyz') return
-  loadWsDecisionFromCache()
+  if (e.key === 'ws_decision_xyz') {
+    loadWsDecisionFromCache()
+    restoreZFromRuntime()
+  }
 }
 
 const onWsDecisionUpdated = () => {
-  loadWsDecisionFromCache()
+  applyNewWsDecision()
 }
-
-
-// 首次加载
-loadWsDecisionFromCache()
 
 window.addEventListener('storage', onStorage)
 window.addEventListener('WS_DECISION_UPDATED', onWsDecisionUpdated)
@@ -318,8 +416,17 @@ const stopPolling = () => {
   }
 }
 
+/**
+ * =========================
+ * 卸载清理
+ * =========================
+ */
 onUnmounted(() => {
   stopPolling()
+  if (zTimer) {
+    clearInterval(zTimer)
+    zTimer = null
+  }
   window.removeEventListener('storage', onStorage)
   window.removeEventListener('WS_DECISION_UPDATED', onWsDecisionUpdated)
 })
@@ -359,10 +466,6 @@ onUnmounted(() => {
   border-radius: 6px;
 }
 
-.textarea::placeholder {
-  color: var(--text-muted);
-}
-
 .textarea:disabled {
   opacity: 0.6;
 }
@@ -394,7 +497,6 @@ onUnmounted(() => {
   border-radius: 6px;
   background: var(--bg-muted);
   border: 1px solid var(--border-base);
-  color: var(--text-primary);
 }
 
 .image-box img {
