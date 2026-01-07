@@ -24,7 +24,7 @@ services:
       # 若只在内网测试，可先写 http://<算力机IP>:8081/outputs
       # PUBLIC_BASE_URL: http://host.docker.internal:8081/outputs
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
-      PLATFORM_EVENT_ENDPOINT: ${PLATFORM_EVENT_ENDPOINT}
+      PLATFORM_EVENT_ENDPOINTS: ${PLATFORM_EVENT_ENDPOINTS}
     ports:
       - "0.0.0.0:9000:9000"   # ←【关键修复】
     restart: always
