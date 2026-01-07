@@ -6,7 +6,7 @@ import requests
 
 # ===== 基础配置（只读，不强依赖） =====
 # 支持多个后端端点
-PLATFORM_EVENT_ENDPOINT = os.getenv(
+PLATFORM_EVENT_ENDPOINTS = os.getenv(
     "PLATFORM_EVENT_ENDPOINTS",
     "").split(",")  # 支持逗号分隔的多个端点
 
