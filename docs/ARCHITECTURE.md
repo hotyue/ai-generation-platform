@@ -41,33 +41,33 @@ DEPLOYMENT / OPERATIONS / 开发文档
               │ HTTP
               ▼
 ┌────────────────────────────┐
-│        Frontend             │
-│  Vue + Nginx (Docker)       │
-│  - SPA                      │
-│  - API Reverse Proxy        │
+│        Frontend            │
+│  Vue + Nginx (Docker)      │
+│  - SPA                     │
+│  - API Reverse Proxy       │
 └─────────────┬──────────────┘
               │ /api
               ▼
 ┌────────────────────────────┐
-│         Backend             │
-│  FastAPI + Gunicorn         │
-│  (Docker)                   │
-│  - Auth / Quota / History   │
-│  - Task Dispatch            │
+│         Backend            │
+│  FastAPI + Gunicorn        │
+│  (Docker)                  │
+│  - Auth / Quota / History  │
+│  - Task Dispatch           │
 └─────────────┬──────────────┘
               │ SQL
               ▼
 ┌────────────────────────────┐
-│        PostgreSQL           │
-│  (Docker + Volume)          │
+│        PostgreSQL          │
+│  (Docker + Volume)         │
 └────────────────────────────┘
 ```
 外部系统：
 ```scss
 ┌────────────────────────────┐
-│         ComfyUI             │
-│  GPU Server (Standalone)    │
-│  HTTP API                   │
+│         ComfyUI            │
+│  GPU Server (Standalone)   │
+│  HTTP API                  │
 └────────────────────────────┘
 ```
 
