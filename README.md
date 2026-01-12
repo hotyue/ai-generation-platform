@@ -1,6 +1,8 @@
 # AI Generation Platform
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
+![Release](https://img.shields.io/github/v/release/hotyue/ai-generation-platform)
+![Last Commit](https://img.shields.io/github/last-commit/hotyue/ai-generation-platform)
 ![Backend](https://img.shields.io/badge/backend-FastAPI-009688)
 ![Frontend](https://img.shields.io/badge/frontend-Vue-42b883)
 ![Container](https://img.shields.io/badge/container-Docker-2496ed)
