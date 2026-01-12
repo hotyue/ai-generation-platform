@@ -63,6 +63,7 @@ Node / Python 不需要在宿主机安装
 
 ## 4. 代码获取与目录要求
 ### 4.1 仓库结构要求（关键）
+```scss
 ai-generation-platform/
 ├── backend/
 │   ├── Dockerfile
@@ -74,7 +75,7 @@ ai-generation-platform/
 │       └── .env.production
 ├── docker-compose.yml
 └── docs/
-
+```
 ### 4.2 获取代码
 ```bash
 git clone <repository-url>
