@@ -1,12 +1,13 @@
 # AI Generation Platform
 
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
+![Backend](https://img.shields.io/badge/backend-FastAPI-009688)
+![Frontend](https://img.shields.io/badge/frontend-Vue-42b883)
+![Container](https://img.shields.io/badge/container-Docker-2496ed)
+![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
 
-![License](https://img.shields.io/github/license/hotyue/ai-generation-platform)
-![Release](https://img.shields.io/github/v/release/hotyue/ai-generation-platform)
-![Last Commit](https://img.shields.io/github/last-commit/hotyue/ai-generation-platform)
-![Repo Size](https://img.shields.io/github/repo-size/hotyue/ai-generation-platform)
-
-AI Generation Platform 是一个基于 **FastAPI + Vue + Docker** 的 AI 生成服务平台，支持用户体系、配额计费、生成任务管理，并可对接外部 AI 推理服务（如 ComfyUI）。
+AI Generation Platform 是一个生产级可部署的 AI 生成管理平台，
+支持用户体系、配额管理、生成任务编排，并可对接多种算力与模型后端。
 
 本仓库为 **生产可部署版本**，采用 **算力端 / 前端 / 后端 / 数据库** 四容器架构，适用于私有化部署、商业化运营及后续规模化扩展。
 
