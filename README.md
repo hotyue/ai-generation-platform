@@ -1,5 +1,11 @@
 # AI Generation Platform
 
+
+![License](https://img.shields.io/github/license/hotyue/docker-compose-stacks)
+![Release](https://img.shields.io/github/v/release/hotyue/docker-compose-stacks)
+![Last Commit](https://img.shields.io/github/last-commit/hotyue/docker-compose-stacks)
+![Repo Size](https://img.shields.io/github/repo-size/hotyue/docker-compose-stacks)
+
 AI Generation Platform 是一个基于 **FastAPI + Vue + Docker** 的 AI 生成服务平台，支持用户体系、配额计费、生成任务管理，并可对接外部 AI 推理服务（如 ComfyUI）。
 
 本仓库为 **生产可部署版本**，采用 **前端 / 后端 / 数据库 三容器架构**，适用于私有化部署、商业化运营及后续规模化扩展。
