@@ -133,7 +133,7 @@ docker compose logs -f db
 
 事实冻结：
 
-所有最终事实以数据库为准
+- 所有最终事实以数据库为准
 
 ## 6. 数据库运维策略
 ### 6.1 数据持久化
@@ -145,12 +145,14 @@ docker compose logs -f db
 - 不允许随意删除 volume
 
 ### 6.2 数据备份（建议）
+```bash
 docker exec -t aiweb-db \
 pg_dump -U aiweb_user aiweb > backup_$(date +%F).sql
-
+```
 ### 6.3 数据恢复（谨慎）
+```bash
 psql -U aiweb_user aiweb < backup.sql
-
+```
 
 ⚠️ 恢复前必须确认版本兼容
 
