@@ -9,13 +9,13 @@ Architecture Whitepaper（架构白皮书）
 本文档属于 架构级事实文档
 
 优先级：
-
+```scss
 README.md
   ↓
 ARCHITECTURE.md（本文档）
   ↓
 DEPLOYMENT / OPERATIONS / 开发文档
-
+```
 
 本文档 不描述未来设想
 
@@ -33,6 +33,7 @@ DEPLOYMENT / OPERATIONS / 开发文档
 - API 为唯一业务事实入口
 
 ### 2.2 架构拓扑图（逻辑）
+```scss
 ┌────────────────────────────┐
 │          Client            │
 │  Browser / Mobile Web      │
@@ -60,13 +61,15 @@ DEPLOYMENT / OPERATIONS / 开发文档
 │        PostgreSQL           │
 │  (Docker + Volume)          │
 └────────────────────────────┘
-
+```
 外部系统：
+```scss
 ┌────────────────────────────┐
 │         ComfyUI             │
 │  GPU Server (Standalone)    │
 │  HTTP API                   │
 └────────────────────────────┘
+```
 
 ## 3. 核心设计原则（已成立事实）
 ### 3.1 事实优先原则（Fact-First）
