@@ -31,7 +31,9 @@
       <textarea
         v-model="prompt"
         class="textarea"
-        placeholder="请输入生成提示词"
+        placeholder="请输入生成提示词
+      按 Shift+Enter 换行
+      按 Enter 进行生成"
         :disabled="textareaDisabled"
         @keydown.enter="onEnterGenerate"
       />
