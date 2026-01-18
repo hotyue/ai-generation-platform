@@ -7,6 +7,7 @@
       placeholder="用户名"
       class="input"
       :disabled="loading"
+      @keydown.enter="onEnter"
     />
 
     <input
@@ -15,6 +16,7 @@
       placeholder="密码"
       class="input"
       :disabled="loading"
+      @keydown.enter="onEnter"
     />
 
     <!-- 注册 / 登录 按钮行 -->
@@ -53,6 +55,12 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+
+const onEnter = (e) => {
+  if (loading.value) return
+  e.preventDefault()
+  handleLogin()
+}
 
 const handleLogin = async () => {
   error.value = ''
