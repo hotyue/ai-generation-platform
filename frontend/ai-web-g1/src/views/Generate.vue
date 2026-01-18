@@ -33,6 +33,7 @@
         class="textarea"
         placeholder="请输入生成提示词"
         :disabled="textareaDisabled"
+        @keydown.enter="onEnterGenerate"
       />
 
       <!-- =========================
@@ -369,6 +370,23 @@ const handleGenerate = async () => {
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * =========================
+ * Enter 键触发生成（裁决级）
+ * =========================
+ */
+const onEnterGenerate = (e) => {
+  // 输入法合成态（中文 / 日文 / 韩文）→ 放行 Enter（允许换行）
+  if (e.isComposing) return
+
+  // 任意组合键 → 放行 Enter（不定义快捷键语义）
+  if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
+
+  // 仅在纯 Enter 场景下，映射为生成触发
+  e.preventDefault()
+  handleGenerate()
 }
 
 /**
