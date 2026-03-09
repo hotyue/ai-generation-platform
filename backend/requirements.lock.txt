@@ -8,6 +8,7 @@ certifi==2025.11.12
 cffi==2.0.0
 charset-normalizer==3.4.3
 click==8.3.1
+cryptography==42.0.5
 dnspython==2.8.0
 ecdsa==0.19.1
 email_validator==2.1.1
@@ -25,6 +26,8 @@ pycparser==2.23
 pydantic==2.6.1
 pydantic-settings==2.1.0
 pydantic_core==2.16.2
+PyJWT==2.8.0
+pymysql==1.1.0
 python-dotenv==1.2.1
 python-jose==3.3.0
 python-multipart==0.0.9
@@ -41,4 +44,3 @@ uvicorn==0.27.1
 uvloop==0.22.1
 watchfiles==1.1.1
 websockets==15.0.1
-PyJWT==2.8.0

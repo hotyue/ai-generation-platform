@@ -3,7 +3,11 @@ uvicorn[standard]==0.27.1
 gunicorn==21.2.0
 
 SQLAlchemy==2.0.25
+# ⚠️ 保留 psycopg2 以兼顾旧版的 PostgreSQL 用户
 psycopg2-binary==2.9.9
+# ⭐ 核心修缮：新增 MariaDB 11 适配驱动
+pymysql==1.1.0
+cryptography==42.0.5
 
 python-jose==3.3.0
 passlib==1.7.4
