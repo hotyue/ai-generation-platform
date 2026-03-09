@@ -10,8 +10,14 @@ services:
       MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
       MARIADB_DATABASE: ${DB_NAME}
     volumes:
-      # ⭐ 核心修缮：强制挂载到 /opt/docker 保证数据永不丢失
+      # ==========================================
+      # ⭐ 动态数据层：挂载到 /opt/docker 保证数据永不丢失
+      # ==========================================
       - /opt/docker/mariadb/data:/var/lib/mysql
+      # ==========================================
+      # ⭐ 静态代码层：挂载初始化脚本。MariaDB 首次启动时会自动读取并建表
+      # ==========================================
+      - ./db/schemas/mariadb_v1.0.36_baseline.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - proxy
 
@@ -34,7 +40,7 @@ services:
       HISTORY_FACTS_ADVANCER_ENABLED: 1
       HONOR_FACTS_ADVANCER_ENABLED: 1
     volumes:
-      # 后端日志统一归档
+      # 后端日志统一归档至物理机
       - /opt/docker/backend/logs:/app/logs
     expose:
       # 仅在 proxy 网络内部暴露 8000，拒绝公网直连
@@ -57,7 +63,7 @@ services:
       - proxy
 
   # ==================================
-  # ⭐ 新增：统一网关 Nginx Proxy Manager
+  # ⭐ 统一网关 Nginx Proxy Manager
   # ==================================
   npm:
     container_name: aiweb-npm
@@ -68,6 +74,7 @@ services:
       - "443:443"   # HTTPS
       - "81:81"     # NPM 管理后台面板
     volumes:
+      # 代理面板的数据与证书统一归档至物理机
       - /opt/docker/npm/data:/data
       - /opt/docker/npm/letsencrypt:/etc/letsencrypt
     networks:
