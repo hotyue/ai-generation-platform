@@ -3,21 +3,17 @@ version: "3.9"
 services:
   db:
     container_name: aiweb-db
-    image: postgres:14
+    image: mariadb:11
     restart: always
-
     environment:
-      POSTGRES_DB: aiweb
-      POSTGRES_USER: aiweb_user
-      # 密码不再明文写入，由 .env 注入
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
+      # 读取 .env 里的密码来初始化 MariaDB
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
     volumes:
-      - aiweb_pgdata:/var/lib/postgresql/data
-
+      # ⭐ 核心修缮：强制挂载到 /opt/docker 保证数据永不丢失
+      - /opt/docker/mariadb/data:/var/lib/mysql
     networks:
-      - aiweb-net
-
+      - proxy
 
   backend:
     container_name: aiweb-backend
@@ -25,27 +21,26 @@ services:
       context: ./backend
     image: aiweb-backend:latest
     restart: always
-
     depends_on:
       - db
-
-    # 所有敏感配置统一从 .env 注入
     env_file:
       - .env
-
-    # 非敏感、结构性配置保留在 compose 中
     environment:
       ENV: production
       DEBUG: "false"
       PYTHONUNBUFFERED: "1"
-      COMFYUI_BASE_URL: http://100.114.23.111:9000
-
+      # ⭐ 核心修缮：在 compose 层自动组装 MariaDB 连接串
+      DATABASE_URL: mysql+pymysql://root:${DB_PASSWORD}@db:3306/${DB_NAME}
+      HISTORY_FACTS_ADVANCER_ENABLED: 1
+      HONOR_FACTS_ADVANCER_ENABLED: 1
+    volumes:
+      # 后端日志统一归档
+      - /opt/docker/backend/logs:/app/logs
     expose:
+      # 仅在 proxy 网络内部暴露 8000，拒绝公网直连
       - "8000"
-
     networks:
-      - aiweb-net
-
+      - proxy
 
   frontend:
     container_name: aiweb-frontend
@@ -53,21 +48,33 @@ services:
       context: ./frontend/ai-web-g1
     image: aiweb-frontend:latest
     restart: always
-
     depends_on:
       - backend
-
-    ports:
-      - "8080:80"
-
+    env_file:
+      - .env
+    # ⚠️ 注意：这里删除了 ports: ["8080:80"]，前端不直接对外，所有流量交由 NPM 反代
     networks:
-      - aiweb-net
+      - proxy
 
-
-volumes:
-  aiweb_pgdata:
-
+  # ==================================
+  # ⭐ 新增：统一网关 Nginx Proxy Manager
+  # ==================================
+  npm:
+    container_name: aiweb-npm
+    image: jc21/nginx-proxy-manager:latest
+    restart: always
+    ports:
+      - "80:80"     # HTTP
+      - "443:443"   # HTTPS
+      - "81:81"     # NPM 管理后台面板
+    volumes:
+      - /opt/docker/npm/data:/data
+      - /opt/docker/npm/letsencrypt:/etc/letsencrypt
+    networks:
+      - proxy
 
 networks:
-  aiweb-net:
+  # 统一通信总线
+  proxy:
+    name: proxy
     driver: bridge
